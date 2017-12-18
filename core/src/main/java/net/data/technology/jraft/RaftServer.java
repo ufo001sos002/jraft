@@ -337,7 +337,10 @@ public class RaftServer implements RaftMessageHandler {
         response.setNextIndex(this.logStore.getFirstAvailableIndex());
         return response;
     }
-
+    
+    /**
+     * 处理选举超时
+     */
     private synchronized void handleElectionTimeout(){
         if(this.steppingDown > 0){
             if(--this.steppingDown == 0){
@@ -587,7 +590,10 @@ public class RaftServer implements RaftMessageHandler {
             this.becomeLeader();
         }
     }
-
+    /**
+     * 处理心跳超时
+     * @param peer
+     */
     private synchronized void handleHeartbeatTimeout(PeerServer peer){
         this.logger.debug("Heartbeat timeout for %d", peer.getId());
         if(this.role == ServerRole.Leader){
