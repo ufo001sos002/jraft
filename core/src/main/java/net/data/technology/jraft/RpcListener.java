@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * RPC 监听
+ */
 public interface RpcListener {
 
     /**

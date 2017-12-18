@@ -36,6 +36,9 @@ import net.data.technology.jraft.RaftRequestMessage;
 import net.data.technology.jraft.RaftResponseMessage;
 import net.data.technology.jraft.RpcClient;
 
+/**
+ * RPC TCP 客户端
+ */
 public class RpcTcpClient implements RpcClient {
 
     private AsynchronousSocketChannel connection;

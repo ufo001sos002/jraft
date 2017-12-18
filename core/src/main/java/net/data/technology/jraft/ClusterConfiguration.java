@@ -129,4 +129,16 @@ public class ClusterConfiguration {
 
         return buffer.array();
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "ClusterConfiguration [logIndex=" + logIndex + ", lastLogIndex=" + lastLogIndex
+                + ", servers=" + servers + "]";
+    }
+
 }

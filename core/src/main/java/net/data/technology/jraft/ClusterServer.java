@@ -72,4 +72,15 @@ public class ClusterServer {
         buffer.put(endpointData);
         return buffer.array();
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "ClusterServer [id=" + id + ", endpoint=" + endpoint + "]";
+    }
+
 }

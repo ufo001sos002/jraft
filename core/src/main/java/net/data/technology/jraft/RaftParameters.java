@@ -202,4 +202,20 @@ public class RaftParameters {
     public int getMaximumAppendingSize(){
         return this.maxAppendingSize;
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "RaftParameters [electionTimeoutUpperBound=" + electionTimeoutUpperBound
+                + ", electionTimeoutLowerBound=" + electionTimeoutLowerBound
+                + ", heartbeatInterval=" + heartbeatInterval + ", rpcFailureBackoff="
+                + rpcFailureBackoff + ", logSyncBatchSize=" + logSyncBatchSize + ", logSyncStopGap="
+                + logSyncStopGap + ", snapshotDistance=" + snapshotDistance + ", snapshotBlockSize="
+                + snapshotBlockSize + ", maxAppendingSize=" + maxAppendingSize + "]";
+    }
+
 }

@@ -19,6 +19,9 @@ package net.data.technology.jraft;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * RPC客户端
+ */
 public interface RpcClient {
 
     /**

@@ -54,4 +54,15 @@ public class LogEntry {
     public LogValueType getValueType(){
         return this.vaueType;
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "LogEntry [term=" + term + ", vaueType=" + vaueType + ", value="
+                + (value != null ? value.length : "null") + "]";
+    }
 }

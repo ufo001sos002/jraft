@@ -40,6 +40,9 @@ import net.data.technology.jraft.SequentialLogStore;
 import net.data.technology.jraft.ServerState;
 import net.data.technology.jraft.ServerStateManager;
 
+/**
+ * 基于文件服务器状态管理
+ */
 public class FileBasedServerStateManager implements ServerStateManager {
 
     private static final String STATE_FILE = "server.state";
@@ -180,4 +183,16 @@ public class FileBasedServerStateManager implements ServerStateManager {
             throw new RuntimeException(exception.getMessage(), exception);
         }
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "FileBasedServerStateManager [serverId=" + serverId + ", serverStateFile="
+                + serverStateFile + ", logStore=" + logStore + ", container=" + container + "]";
+    }
+
 }

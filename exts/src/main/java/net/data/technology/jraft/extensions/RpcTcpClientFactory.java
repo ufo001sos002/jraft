@@ -27,6 +27,9 @@ import org.apache.log4j.LogManager;
 import net.data.technology.jraft.RpcClient;
 import net.data.technology.jraft.RpcClientFactory;
 
+/**
+ * RPC TCP 客户端工厂
+ */
 public class RpcTcpClientFactory implements RpcClientFactory {
     private ExecutorService executorService;
 

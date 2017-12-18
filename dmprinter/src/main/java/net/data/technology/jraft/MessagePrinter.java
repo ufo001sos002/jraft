@@ -55,6 +55,9 @@ import org.apache.log4j.LogManager;
 
 import net.data.technology.jraft.extensions.AsyncUtility;
 
+/**
+ * 消息打印状态机
+ */
 public class MessagePrinter implements StateMachine {
 
     private Path snapshotStore;
@@ -538,4 +541,21 @@ public class MessagePrinter implements StateMachine {
             this.logger.info("failed to close client socket", ex);
         }
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "MessagePrinter [snapshotStore=" + snapshotStore + ", commitIndex=" + commitIndex
+                + ", messages=" + messages.size() + ", pendingMessages=" + pendingMessages.size()
+                + ", snapshotInprogress=" + snapshotInprogress + ", port=" + port + ", listener="
+                + listener + ", executorService=" + executorService
+                + ", messageSender=" + messageSender + ", uncommittedRequests="
+                + uncommittedRequests.size() + "]";
+    }
+
+
 }

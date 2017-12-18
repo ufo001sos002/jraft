@@ -19,6 +19,9 @@ package net.data.technology.jraft;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * 状态机
+ */
 public interface StateMachine {
 
 	/**

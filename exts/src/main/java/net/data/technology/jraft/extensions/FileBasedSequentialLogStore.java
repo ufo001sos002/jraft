@@ -719,5 +719,35 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 this.bufferWriteLock.unlock();
             }
         }
+
+        /**
+         * 
+         * @return
+         * @see java.lang.Object#toString()
+         */
+        @Override
+        public String toString() {
+            return "LogBuffer [startIndex=" + startIndex + ", maxSize=" + maxSize + ", bufferLock="
+                    + bufferLock + ", bufferReadLock=" + bufferReadLock + ", bufferWriteLock="
+                    + bufferWriteLock + ", buffer=" + buffer.size() + "]";
+        }
+
+
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "FileBasedSequentialLogStore [indexFile=" + indexFile + ", dataFile=" + dataFile
+                + ", startIndexFile=" + startIndexFile + ", entriesInStore=" + entriesInStore
+                + ", startIndex=" + startIndex + ", logContainer=" + logContainer + ", storeLock="
+                + storeLock + ", storeReadLock=" + storeReadLock + ", storeWriteLock="
+                + storeWriteLock + ", buffer=" + buffer + ", bufferSize=" + bufferSize + "]";
+    }
+
+
 }

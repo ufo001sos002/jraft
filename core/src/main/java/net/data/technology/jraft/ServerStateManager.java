@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * 服务器状态管理
+ */
 public interface ServerStateManager {
 
     /**

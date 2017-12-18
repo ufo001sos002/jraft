@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * RPC客户端工厂
+ */
 public interface RpcClientFactory {
 
     /**

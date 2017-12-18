@@ -19,6 +19,9 @@ package net.data.technology.jraft;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
+/**
+ * Raft 上下文
+ */
 public class RaftContext {
 
     private ServerStateManager serverStateManager;
