@@ -19,6 +19,9 @@ package net.data.technology.jraft;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Raft 消息发送者
+ */
 public interface RaftMessageSender {
 
     /**

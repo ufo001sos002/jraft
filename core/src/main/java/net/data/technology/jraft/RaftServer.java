@@ -34,6 +34,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Raft 服务器
+ */
 public class RaftServer implements RaftMessageHandler {
 
     private static final int DEFAULT_SNAPSHOT_SYNC_BLOCK_SIZE = 4 * 1024;
@@ -1654,4 +1657,24 @@ public class RaftServer implements RaftMessageHandler {
         }
 
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "RaftServer [context=" + context + ", scheduledElection=" + scheduledElection
+                + ", peers=" + peers.size() + ", role=" + role + ", state=" + state + ", leader="
+                + leader + ", id=" + id + ", votesResponded=" + votesResponded + ", votesGranted="
+                + votesGranted + ", electionCompleted=" + electionCompleted + ", logStore="
+                + logStore + ", stateMachine=" + stateMachine + ", random=" + random
+                + ", electionTimeoutTask=" + electionTimeoutTask + ", config=" + config
+                + ", quickCommitIndex=" + quickCommitIndex + ", commitingThread=" + commitingThread
+                + ", serverToJoin=" + serverToJoin + ", configChanging=" + configChanging
+                + ", catchingUp=" + catchingUp + ", steppingDown=" + steppingDown
+                + ", snapshotInProgress=" + snapshotInProgress + "]";
+    }
+
 }

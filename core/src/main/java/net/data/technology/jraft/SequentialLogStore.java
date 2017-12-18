@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * 顺序日志存储
+ */
 public interface SequentialLogStore {
 
     /**

@@ -17,6 +17,10 @@
 
 package net.data.technology.jraft;
 
+/**
+ * Raft 一致主运行类
+ *
+ */
 public class RaftConsensus {
 
     public static RaftMessageSender run(RaftContext context){

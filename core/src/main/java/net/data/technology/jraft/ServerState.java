@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * 服务器状态
+ */
 public class ServerState {
 
     private long term;
@@ -51,5 +54,16 @@ public class ServerState {
         if(commitIndex > this.commitIndex){
             this.commitIndex = commitIndex;
         }
+    }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+        return "ServerState [term=" + term + ", commitIndex=" + commitIndex + ", votedFor="
+                + votedFor + "]";
     }
 }

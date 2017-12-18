@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * Raft消息处理
+ */
 public interface RaftMessageHandler {
 
     public RaftResponseMessage processRequest(RaftRequestMessage request);
