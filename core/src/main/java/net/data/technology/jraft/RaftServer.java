@@ -38,15 +38,26 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Raft 服务器
  */
 public class RaftServer implements RaftMessageHandler {
-
+	/**
+	 * 默认快照 同步块大小
+	 */
     private static final int DEFAULT_SNAPSHOT_SYNC_BLOCK_SIZE = 4 * 1024;
+    /**
+     * 索引比较对象
+     */
     private static final Comparator<Long> indexComparator = new Comparator<Long>(){
 
         @Override
         public int compare(Long arg0, Long arg1) {
             return (int)(arg1.longValue() - arg0.longValue());
         }};
+    /**
+     *  Raft 上下文 对象   
+     */
     private RaftContext context;
+    /**
+     * 选举任务返回结果
+     */
     private ScheduledFuture<?> scheduledElection;
     private Map<Integer, PeerServer> peers = new HashMap<Integer, PeerServer>();
     private ServerRole role;
