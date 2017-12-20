@@ -18,14 +18,17 @@
 package net.data.technology.jraft;
 
 /**
- * Log value type for the value of a log entry
+ * Log value type for the value of a log entry<br/>
+ * (日志记录类型)
+ * 
  * @author Data Technology LLC
  *
  */
 public enum LogValueType {
 
     /**
-     * Log value for application, which means the value could only be understood by the application (not jraft)
+     * Log value for application, which means the value could only be understood by the application (not jraft)<br/>
+     * (应用程序相关)
      */
     Application {
         @Override
@@ -35,7 +38,8 @@ public enum LogValueType {
     },
     
     /**
-     * Log value is cluster configuration data
+     * Log value is cluster configuration data<br/>
+     * (集群配置相关)
      */
     Configuration {
         @Override
@@ -45,7 +49,8 @@ public enum LogValueType {
     },
     
     /**
-     * Log value is cluster server id
+     * Log value is cluster server id<br/>
+     * (集群Server Id)
      */
     ClusterServer {
         @Override
@@ -55,7 +60,8 @@ public enum LogValueType {
     },
     
     /**
-     * Log value is a pack of many log entries, this is used when a server is left far behind or a new server just join the cluster
+     * Log value is a pack of many log entries, this is used when a server is left far behind or a new server just join the cluster<br/>
+     * (日志包，表示含有多条日志)
      */
     LogPack {
         @Override
@@ -65,7 +71,8 @@ public enum LogValueType {
     }, 
     
     /**
-     * Log value is snapshot sync request data
+     * Log value is snapshot sync request data<br/>
+     * (快照同步请求数据)
      */
     SnapshotSyncRequest {
         @Override
@@ -76,14 +83,19 @@ public enum LogValueType {
 
     /**
      * Converts a LogValueType to a byte value
-     * @return byte value of the LogValueType
+     * 
+     * @return byte value of the LogValueType <br>
+     *         (返回对应类型的 byte 值)
      */
     public abstract byte toByte();
 
     /**
-     * Converts a byte value to LogValueType
+     * Converts a byte value to LogValueType<br/>
+     * 根据byte 值返回对应日志类型枚举对象
+     * 
      * @param b byte value
      * @return LogValueType
+     * @throws IllegalArgumentException byte值不对应时返回
      */
     public static LogValueType fromByte(byte b){
         switch(b){

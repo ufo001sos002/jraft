@@ -21,9 +21,17 @@ package net.data.technology.jraft;
  * 服务器状态
  */
 public class ServerState {
-
+    /**
+     * 任期
+     */
     private long term;
+    /**
+     * 已提交索引
+     */
     private long commitIndex;
+    /**
+     * 投票
+     */
     private int votedFor;
 
     public long getTerm() {

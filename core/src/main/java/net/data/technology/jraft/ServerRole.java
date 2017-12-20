@@ -17,9 +17,20 @@
 
 package net.data.technology.jraft;
 
+/**
+ * 服务端校色
+ */
 public enum ServerRole {
-
+    /**
+     * 跟随者
+     */
     Follower,
+    /**
+     * 候选者
+     */
     Candidate,
+    /**
+     * 领导者
+     */
     Leader
 }

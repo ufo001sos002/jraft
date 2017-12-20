@@ -18,16 +18,26 @@
 package net.data.technology.jraft;
 
 /**
- * Log entry, which represents an entry stored in the sequential log store
- * replication is done through LogEntry objects
+ * Log entry, which represents an entry stored in the sequential log store replication is done
+ * through LogEntry objects<br/>
+ * 日志记录对象
+ * 
  * @author Data Technology LLC
  *
  */
 public class LogEntry {
-
+    /**
+     * 日志记录实际内容
+     */
     private byte[] value;
+    /**
+     * 任期
+     */
     private long term;
-    private LogValueType vaueType;
+    /**
+     * 日志类型
+     */
+    private LogValueType valueType;
 
     public LogEntry(){
         this(0, null);
@@ -40,19 +50,31 @@ public class LogEntry {
     public LogEntry(long term, byte[] value, LogValueType valueType){
         this.term = term;
         this.value = value;
-        this.vaueType = valueType;
+        this.valueType = valueType;
     }
 
-    public long getTerm(){
-        return this.term;
+
+
+    /**
+     * @return {@link #value} 的值
+     */
+    public byte[] getValue() {
+        return value;
     }
 
-    public byte[] getValue(){
-        return this.value;
+    /**
+     * @return {@link #term} 的值
+     */
+    public long getTerm() {
+        return term;
     }
 
-    public LogValueType getValueType(){
-        return this.vaueType;
+
+    /**
+     * @return {@link #valueType} 的值
+     */
+    public LogValueType getValueType() {
+        return valueType;
     }
 
     /**
@@ -62,7 +84,7 @@ public class LogEntry {
      */
     @Override
     public String toString() {
-        return "LogEntry [term=" + term + ", vaueType=" + vaueType + ", value="
+        return "LogEntry [term=" + term + ", valueType=" + valueType + ", value="
                 + (value != null ? value.length : "null") + "]";
     }
 }

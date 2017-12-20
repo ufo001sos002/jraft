@@ -60,14 +60,41 @@ public class RaftServer implements RaftMessageHandler {
      */
     private ScheduledFuture<?> scheduledElection;
     private Map<Integer, PeerServer> peers = new HashMap<Integer, PeerServer>();
+    /**
+     * 服务器角色
+     */
     private ServerRole role;
+    /**
+     * 服务器状态
+     */
     private ServerState state;
+    /**
+     * 领导ID
+     */
     private int leader;
+    /**
+     * Server Id
+     */
     private int id;
+    /**
+     * 投票回应数
+     */
     private int votesResponded;
+    /**
+     * 投票同意数
+     */
     private int votesGranted;
+    /**
+     * 选举是否完成 true 完成
+     */
     private boolean electionCompleted;
+    /**
+     * 日志存储对象
+     */
     private SequentialLogStore logStore;
+    /**
+     * 状态机对象
+     */
     private StateMachine stateMachine;
     private Logger logger;
     private Random random;

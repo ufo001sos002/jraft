@@ -17,8 +17,13 @@
 
 package net.data.technology.jraft;
 
+/**
+ * Raft消息类型
+ */
 public enum RaftMessageType {
-
+    /**
+     * 投票请求
+     */
     RequestVoteRequest {
         @Override
         public String toString() {
@@ -30,6 +35,9 @@ public enum RaftMessageType {
             return (byte) 1;
         }
     },
+    /**
+     * 投票请求响应
+     */
     RequestVoteResponse {
         @Override
         public String toString() {
@@ -41,6 +49,9 @@ public enum RaftMessageType {
             return (byte) 2;
         }
     },
+    /**
+     * 追加记录请求
+     */
     AppendEntriesRequest {
         @Override
         public String toString() {
@@ -52,6 +63,9 @@ public enum RaftMessageType {
             return (byte) 3;
         }
     },
+    /**
+     * 追加记录响应
+     */
     AppendEntriesResponse {
         @Override
         public String toString() {
@@ -63,6 +77,9 @@ public enum RaftMessageType {
             return (byte) 4;
         }
     },
+    /**
+     * 客户端请求
+     */
     ClientRequest {
         @Override
         public String toString() {
@@ -74,6 +91,9 @@ public enum RaftMessageType {
             return (byte) 5;
         }
     },
+    /**
+     * 增加服务端请求
+     */
     AddServerRequest {
         @Override
         public String toString() {
@@ -85,6 +105,9 @@ public enum RaftMessageType {
             return (byte) 6;
         }
     },
+    /**
+     * 增加服务端响应
+     */
     AddServerResponse {
         @Override
         public String toString() {
@@ -96,6 +119,9 @@ public enum RaftMessageType {
             return (byte) 7;
         }
     },
+    /**
+     * 移除服务端请求
+     */
     RemoveServerRequest {
         @Override
         public String toString(){
@@ -107,6 +133,9 @@ public enum RaftMessageType {
             return (byte)8;
         }
     },
+    /**
+     * 移除服务端响应
+     */
     RemoveServerResponse {
         @Override
         public String toString(){
@@ -118,6 +147,9 @@ public enum RaftMessageType {
             return (byte)9;
         }
     },
+    /**
+     * 同步日志请求
+     */
     SyncLogRequest {
         @Override
         public String toString(){
@@ -129,6 +161,9 @@ public enum RaftMessageType {
             return (byte)10;
         }
     },
+    /**
+     * 同步日志响应
+     */
     SyncLogResponse {
         @Override
         public String toString(){
@@ -140,6 +175,9 @@ public enum RaftMessageType {
             return (byte)11;
         }
     },
+    /**
+     * 加入集群请求
+     */
     JoinClusterRequest {
         @Override
         public String toString(){
@@ -151,6 +189,9 @@ public enum RaftMessageType {
             return (byte)12;
         }
     },
+    /**
+     * 加入集群响应
+     */
     JoinClusterResponse {
         @Override
         public String toString(){
@@ -162,6 +203,9 @@ public enum RaftMessageType {
             return (byte)13;
         }
     },
+    /**
+     * 离开集群请求
+     */
     LeaveClusterRequest {
         @Override
         public String toString(){
@@ -173,6 +217,9 @@ public enum RaftMessageType {
             return (byte)14;
         }
     },
+    /**
+     * 离开集群响应
+     */
     LeaveClusterResponse {
         @Override
         public String toString(){
@@ -184,6 +231,9 @@ public enum RaftMessageType {
             return (byte)15;
         }
     },
+    /**
+     * 初始化快照请求
+     */
     InstallSnapshotRequest {
         @Override
         public String toString(){
@@ -195,6 +245,9 @@ public enum RaftMessageType {
             return (byte)16;
         }
     },
+    /**
+     * 初始化快照响应
+     */
     InstallSnapshotResponse {
         @Override
         public String toString(){
@@ -206,9 +259,20 @@ public enum RaftMessageType {
             return (byte)17;
         }
     };
-
+    /**
+     * 
+     * 
+     * @return 类型转换成对应byte值
+     */
     public abstract byte toByte();
 
+    /**
+     * 
+     * 
+     * @param value
+     * @return 根据对应byte值转换成 raft 消息枚举对象
+     * @throws IllegalArgumentException 对应值 不存在
+     */
     public static RaftMessageType fromByte(byte value) {
         switch (value) {
         case 1:

@@ -18,13 +18,31 @@
 package net.data.technology.jraft;
 
 public class RaftParameters {
-
+    /**
+     * Election timeout upper bound in milliseconds<br/>
+     * 选举超时上限毫秒数
+     */
     private int electionTimeoutUpperBound;
+    /**
+     * Election timeout lower bound in milliseconds<br/>
+     * 选举超时下限毫秒数
+     */
     private int electionTimeoutLowerBound;
+    /**
+     * heartbeat interval in milliseconds<br/>
+     * 心跳间隔 毫秒
+     */
     private int heartbeatInterval;
+    /**
+     * Rpc failure backoff in milliseconds
+     */
     private int rpcFailureBackoff;
     private int logSyncBatchSize;
     private int logSyncStopGap;
+    /**
+     * The commit distances for snapshots, zero means don't take any snapshots<br/>
+     * 进行快照操作的 已提交 次数 0为不创建快照
+     */
     private int snapshotDistance;
     private int snapshotBlockSize;
     private int maxAppendingSize;
@@ -181,7 +199,8 @@ public class RaftParameters {
 
     /**
      * The commit distances for snapshots, zero means don't take any snapshots
-     * @return commit distances for log store
+     * 
+     * @return commit distances for log store {@link #snapshotDistance}
      */
     public int getSnapshotDistance(){
         return this.snapshotDistance;
