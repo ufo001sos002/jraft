@@ -29,6 +29,9 @@ import java.nio.charset.StandardCharsets;
 public class ClusterServer {
 
     private int id;
+    /**
+     * 设备终端字符串
+     */
     private String endpoint;
 
     public ClusterServer(){
@@ -52,10 +55,16 @@ public class ClusterServer {
         this.id = id;
     }
 
+    /**
+     * @return {@link #endpoint} 的值
+     */
     public String getEndpoint() {
         return endpoint;
     }
 
+    /**
+     * @param endpoint 根据 endpoint 设置 {@link #endpoint}的值
+     */
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
     }
