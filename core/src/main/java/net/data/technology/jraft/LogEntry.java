@@ -16,7 +16,6 @@
  */
 
 package net.data.technology.jraft;
-
 /**
  * Log entry, which represents an entry stored in the sequential log store replication is done
  * through LogEntry objects<br/>
@@ -38,15 +37,27 @@ public class LogEntry {
      * 日志类型
      */
     private LogValueType valueType;
-
+    
+    /**
+     * 0,null 为入参调用{@link #LogEntry(long, byte[])}
+     */
     public LogEntry(){
         this(0, null);
     }
-
+    /**
+     * 根据参数创建 {@link LogValueType#Application }应用程序相关 类型的日志对象
+     * @param term
+     * @param value
+     */
     public LogEntry(long term, byte[] value){
         this(term, value, LogValueType.Application);
     }
-
+    /**
+     * 根据参数创建日志对象
+     * @param term
+     * @param value
+     * @param valueType
+     */
     public LogEntry(long term, byte[] value, LogValueType valueType){
         this.term = term;
         this.value = value;

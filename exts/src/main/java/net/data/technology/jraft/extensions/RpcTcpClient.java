@@ -43,7 +43,13 @@ public class RpcTcpClient implements RpcClient {
 
     private AsynchronousSocketChannel connection;
     private AsynchronousChannelGroup channelGroup;
+    /**
+     * 读任务队列
+     */
     private ConcurrentLinkedQueue<AsyncTask<ByteBuffer>> readTasks;
+    /**
+     * 写任务队列
+     */
     private ConcurrentLinkedQueue<AsyncTask<RaftRequestMessage>> writeTasks;
     private AtomicInteger readers;
     private AtomicInteger writers;
@@ -85,11 +91,16 @@ public class RpcTcpClient implements RpcClient {
 
         return result;
     }
-
+    
+    /**
+     * 发送和读数据
+     * @param task 发送任务
+     * @param skipQueueing 是否跳过队列 直接发送 true 跳过，否者加入发送队列
+     */
     private void sendAndRead(AsyncTask<RaftRequestMessage> task, boolean skipQueueing){
         if(!skipQueueing){
             int writerCount = this.writers.getAndIncrement();
-            if(writerCount > 0){
+            if(writerCount > 0){ // 加入队列
                 this.logger.debug("there is a pending write, queue this write task");
                 this.writeTasks.add(task);
                 return;
@@ -105,12 +116,12 @@ public class RpcTcpClient implements RpcClient {
                     closeSocket();
                 }else{
                     // read the response
-                    ByteBuffer responseBuffer = ByteBuffer.allocate(BinaryUtils.RAFT_RESPONSE_HEADER_SIZE);
+                    ByteBuffer responseBuffer = ByteBuffer.allocate(BinaryUtils.RAFT_RESPONSE_HEADER_SIZE); // 创建回包大小的buffer加入队列进行读操作
                     this.readResponse(new AsyncTask<ByteBuffer>(responseBuffer, context.future), false);
                 }
 
                 int waitingWriters = this.writers.decrementAndGet();
-                if(waitingWriters > 0){
+                if(waitingWriters > 0){ // 队列发送
                     this.logger.debug("there are pending writers in queue, will try to process them");
                     AsyncTask<RaftRequestMessage> pendingTask = null;
                     while((pendingTask = this.writeTasks.poll()) == null);
@@ -123,7 +134,11 @@ public class RpcTcpClient implements RpcClient {
             closeSocket();
         }
     }
-
+    /**
+     * 读取回包数据
+     * @param task 异步任务队列
+     * @param skipQueueing 是否跳过队列直接进行操作  true 跳过
+     */
     private void readResponse(AsyncTask<ByteBuffer> task, boolean skipQueueing){
         if(!skipQueueing){
             int readerCount = this.readers.getAndIncrement();
@@ -135,7 +150,7 @@ public class RpcTcpClient implements RpcClient {
         }
 
         CompletionHandler<Integer, AsyncTask<ByteBuffer>> handler = handlerFrom((Integer bytesRead, AsyncTask<ByteBuffer> context) -> {
-            if(bytesRead.intValue() < BinaryUtils.RAFT_RESPONSE_HEADER_SIZE){
+            if(bytesRead.intValue() < BinaryUtils.RAFT_RESPONSE_HEADER_SIZE){ // 数据未收取全
                 logger.info("failed to read response from remote server.");
                 context.future.completeExceptionally(new IOException("Only part of the response data could be read"));
                 closeSocket();
@@ -162,7 +177,12 @@ public class RpcTcpClient implements RpcClient {
             closeSocket();
         }
     }
-
+    
+    /**
+     * 生成异步操作结果处理对象(失败处理函数式接口对象已固定)
+     * @param completed 成功处理对象
+     * @return 异步操作结果处理对象(失败处理函数式接口对象已固定
+     */
     private <V, I> CompletionHandler<V, AsyncTask<I>> handlerFrom(BiConsumer<V, AsyncTask<I>> completed) {
         return AsyncUtility.handlerFrom(completed, (Throwable error, AsyncTask<I> context) -> {
                         this.logger.info("socket error", error);

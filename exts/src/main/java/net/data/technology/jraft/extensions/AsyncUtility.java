@@ -21,9 +21,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.function.BiConsumer;
-
+/**
+ * 异步工具类
+ */
 public class AsyncUtility {
-
+	/**
+	 * 生成异步消息完成处理对象
+	 * @param completed 成功 处理 函数式接口对象
+	 * @param failed 失败 处理 函数式接口对象
+	 * @return 异步消息完成处理对象 not null
+	 */
     public static <V, A> CompletionHandler<V, A> handlerFrom(BiConsumer<V, A> completed, BiConsumer<Throwable, A> failed) {
         return new CompletionHandler<V, A>() {
             @Override
@@ -37,12 +44,18 @@ public class AsyncUtility {
             }
         };
     }
-
+    /**
+     * 从通道中读取数据
+     * @param channel
+     * @param buffer 读取的buffer
+     * @param attachment 附件对象
+     * @param completionHandler 读操作完成后回调 完成处理对象
+     */
     public static <A> void readFromChannel(AsynchronousByteChannel channel, ByteBuffer buffer, A attachment, CompletionHandler<Integer, A> completionHandler){
         try{
             channel.read(
                     buffer,
-                    new AsyncContext<A>(attachment, completionHandler),
+                    new AsyncContext<A>(attachment, completionHandler), // 再次封装 作为附件对象
                     handlerFrom(
                     (Integer result, AsyncContext<A> a) -> {
                         int bytesRead = result.intValue();
@@ -59,12 +72,19 @@ public class AsyncUtility {
             completionHandler.failed(exception, attachment);
         }
     }
-
+    
+    /**
+     * 写数据至通道
+     * @param channel
+     * @param buffer 需写的数据
+     * @param attachment 附件对象
+     * @param completionHandler 写操作完成后回调 完成处理对象
+     */
     public static <A> void writeToChannel(AsynchronousByteChannel channel, ByteBuffer buffer, A attachment, CompletionHandler<Integer, A> completionHandler){
         try{
             channel.write(
                     buffer,
-                    new AsyncContext<A>(attachment, completionHandler),
+                    new AsyncContext<A>(attachment, completionHandler), // 再次封装 作为附件对象
                     handlerFrom(
                     (Integer result, AsyncContext<A> a) -> {
                         int bytesRead = result.intValue();
@@ -81,11 +101,25 @@ public class AsyncUtility {
             completionHandler.failed(exception, attachment);
         }
     }
-
+    /**
+     * 异步操作内容类(用于扩展作为 通信相关附件对象)
+     */
     static class AsyncContext<A>{
+    	/**
+    	 * 附件对象
+    	 */
         private A attachment;
+        /**
+         * 异步操作完成对象
+         */
         private CompletionHandler<Integer, A> completionHandler;
-
+        
+        /**
+         * 
+         * 根据参数构造 类{@link AsyncContext} 对象
+         * @param attachment
+         * @param handler
+         */
         public AsyncContext(A attachment, CompletionHandler<Integer, A> handler){
             this.attachment = attachment;
             this.completionHandler = handler;

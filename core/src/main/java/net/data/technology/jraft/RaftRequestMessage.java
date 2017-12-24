@@ -16,43 +16,72 @@
  */
 
 package net.data.technology.jraft;
-
+/**
+ * Raft请求消息对象
+ */
 public class RaftRequestMessage extends RaftMessage {
-
+	/**
+	 * 最后日志任期
+	 */
     private long lastLogTerm;
+    /**
+     * 最后日志索引位置
+     */
     private long lastLogIndex;
+    /**
+     * 已提交的索引位置
+     */
     private long commitIndex;
+    /**
+     * 日志对象数组
+     */
     private LogEntry[] logEntries;
-
-    public long getLastLogTerm() {
-        return lastLogTerm;
-    }
-
-    public void setLastLogTerm(long lastLogTerm) {
-        this.lastLogTerm = lastLogTerm;
-    }
-
-    public long getLastLogIndex() {
-        return lastLogIndex;
-    }
-
-    public void setLastLogIndex(long lastLogIndex) {
-        this.lastLogIndex = lastLogIndex;
-    }
-
-    public long getCommitIndex() {
-        return commitIndex;
-    }
-
-    public void setCommitIndex(long commitIndex) {
-        this.commitIndex = commitIndex;
-    }
-
-    public LogEntry[] getLogEntries() {
-        return logEntries;
-    }
-
-    public void setLogEntries(LogEntry[] logEntries) {
-        this.logEntries = logEntries;
-    }
+	/**
+	 * @return 返回 {@link #lastLogTerm}值
+	 */
+	public long getLastLogTerm() {
+		return lastLogTerm;
+	}
+	/**
+	 * @param 用参数lastLogTerm设置 {@link #lastLogTerm}
+	 */
+	public void setLastLogTerm(long lastLogTerm) {
+		this.lastLogTerm = lastLogTerm;
+	}
+	/**
+	 * @return 返回 {@link #lastLogIndex}值
+	 */
+	public long getLastLogIndex() {
+		return lastLogIndex;
+	}
+	/**
+	 * @param 用参数lastLogIndex设置 {@link #lastLogIndex}
+	 */
+	public void setLastLogIndex(long lastLogIndex) {
+		this.lastLogIndex = lastLogIndex;
+	}
+	/**
+	 * @return 返回 {@link #commitIndex}值
+	 */
+	public long getCommitIndex() {
+		return commitIndex;
+	}
+	/**
+	 * @param 用参数commitIndex设置 {@link #commitIndex}
+	 */
+	public void setCommitIndex(long commitIndex) {
+		this.commitIndex = commitIndex;
+	}
+	/**
+	 * @return 返回 {@link #logEntries}值
+	 */
+	public LogEntry[] getLogEntries() {
+		return logEntries;
+	}
+	/**
+	 * @param 用参数logEntries设置 {@link #logEntries}
+	 */
+	public void setLogEntries(LogEntry[] logEntries) {
+		this.logEntries = logEntries;
+	}
 }
