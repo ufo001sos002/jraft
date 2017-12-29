@@ -39,6 +39,10 @@ import net.data.technology.jraft.RaftRequestMessage;
 import net.data.technology.jraft.RaftResponseMessage;
 import net.data.technology.jraft.RpcListener;
 
+/**
+ * RPC TCP 监听服务
+ *
+ */
 public class RpcTcpListener implements RpcListener {
     private int port;
     private Logger logger;
