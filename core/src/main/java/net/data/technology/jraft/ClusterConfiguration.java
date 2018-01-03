@@ -23,14 +23,24 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Cluster configuration, a class to hold the cluster configuration information
+ * Cluster configuration, a class to hold the cluster configuration information <br>
+ * 集群配置对象
+ * 
  * @author Data Technology LLC
  *
  */
 public class ClusterConfiguration {
-
+    /**
+     * 日志索引
+     */
     private long logIndex;
+    /**
+     * 最后日志索引
+     */
     private long lastLogIndex;
+    /**
+     * 集群Server集合
+     */
     private List<ClusterServer> servers;
 
     public ClusterConfiguration(){
@@ -40,8 +50,10 @@ public class ClusterConfiguration {
     }
 
     /**
-     * De-serialize the data stored in buffer to cluster configuration
-     * this is used for the peers to get the cluster configuration from log entry value
+     * De-serialize the data stored in buffer to cluster configuration this is used for the peers to
+     * get the cluster configuration from log entry value <br>
+     * 从buffer中获取集群配置信息
+     * 
      * @param buffer the binary data
      * @return cluster configuration
      */
@@ -57,8 +69,10 @@ public class ClusterConfiguration {
     }
 
     /**
-     * De-serialize the data stored in buffer to cluster configuration
-     * this is used for the peers to get the cluster configuration from log entry value
+     * De-serialize the data stored in buffer to cluster configuration this is used for the peers to
+     * get the cluster configuration from log entry value <br>
+     * 从byte数组中获取集群配置信息
+     * 
      * @param data the binary data
      * @return cluster configuration
      */
@@ -66,34 +80,53 @@ public class ClusterConfiguration {
         return fromBytes(ByteBuffer.wrap(data));
     }
 
+
+    /**
+     * @return {@link #logIndex} 的值
+     */
     public long getLogIndex() {
         return logIndex;
     }
 
+    /**
+     * @param logIndex 根据 logIndex 设置 {@link #logIndex}的值
+     */
     public void setLogIndex(long logIndex) {
         this.logIndex = logIndex;
     }
 
+
     /**
      * Gets the log index that contains the previous cluster configuration
-     * @return log index
+     * 
+     * @return log index {@link #lastLogIndex} 的值
+     * 
      */
     public long getLastLogIndex() {
         return lastLogIndex;
     }
 
+    /**
+     * @param lastLogIndex 根据 lastLogIndex 设置 {@link #lastLogIndex}的值
+     */
     public void setLastLogIndex(long lastLogIndex) {
         this.lastLogIndex = lastLogIndex;
     }
 
+
+    /**
+     * @return {@link #servers} 的值
+     */
     public List<ClusterServer> getServers() {
         return servers;
     }
 
     /**
      * Try to get a cluster server configuration from cluster configuration
+     * 
      * @param id the server id
-     * @return a cluster server configuration or null if id is not found
+     * @return a cluster server configuration or null if id is not found<br>
+     *         id未对应时返回null
      */
     public ClusterServer getServer(int id){
         for(ClusterServer server : this.servers){

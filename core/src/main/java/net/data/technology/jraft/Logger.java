@@ -18,14 +18,43 @@
 package net.data.technology.jraft;
 
 public interface Logger {
-
+    /**
+     * 根据参数输出debug日志
+     * 
+     * @param format
+     * @param args
+     */
     public void debug(String format, Object... args);
 
+    /**
+     * 根据参数输出info日志
+     * 
+     * @param format
+     * @param args
+     */
     public void info(String format, Object... args);
 
+    /**
+     * 根据参数输出warning日志
+     * 
+     * @param format
+     * @param args
+     */
     public void warning(String format, Object... args);
 
+    /**
+     * 根据参数输出error日志
+     * 
+     * @param format
+     * @param args
+     */
     public void error(String format, Object... args);
 
+    /**
+     * 根据参数输出error日志
+     * 
+     * @param format
+     * @param args
+     */
     public void error(String format, Throwable error, Object... args);
 }

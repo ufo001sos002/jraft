@@ -23,14 +23,17 @@ import java.nio.charset.StandardCharsets;
 /**
  * Cluster server configuration 
  * a class to hold the configuration information for a server in a cluster
+ * <br> 集群Server对象
  * @author Data Technology LLC
  *
  */
 public class ClusterServer {
-
+    /**
+     * 集群Sever ID
+     */
     private int id;
     /**
-     * 设备终端字符串
+     * 集群Server 终端字符串
      */
     private String endpoint;
 
@@ -39,6 +42,14 @@ public class ClusterServer {
         this.endpoint = null;
     }
 
+    /**
+     * 
+     * <p>
+     * Description: 从参数中 获取集群Server对象
+     * </p>
+     * 
+     * @param buffer 数组[格式：id|length|data]
+     */
     public ClusterServer(ByteBuffer buffer){
         this.id = buffer.getInt();
         int dataSize = buffer.getInt();
@@ -47,10 +58,16 @@ public class ClusterServer {
         this.endpoint = new String(endpointData, StandardCharsets.UTF_8);
     }
 
+    /**
+     * @return {@link #id} 的值
+     */
     public int getId() {
         return id;
     }
 
+    /**
+     * @param id 根据 id 设置 {@link #id}的值
+     */
     public void setId(int id) {
         this.id = id;
     }
@@ -70,8 +87,10 @@ public class ClusterServer {
     }
 
     /**
-     * Serialize a server configuration to binary data
-     * @return the binary data that represents the server configuration
+     * Serialize a server configuration to binary data <br/>
+     * 序列化服务配置 至 字节 数组[格式：id|length|data]
+     * 
+     * @return the binary data that represents the server configuration 服务器配置字节数组形式
      */
     public byte[] toBytes(){
         byte[] endpointData = this.endpoint.getBytes(StandardCharsets.UTF_8);

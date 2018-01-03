@@ -18,7 +18,7 @@
 package net.data.technology.jraft;
 
 /**
- * 服务器状态
+ * 集群服务端 状态
  */
 public class ServerState {
     /**

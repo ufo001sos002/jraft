@@ -27,19 +27,37 @@ public class Log4jLogger implements net.data.technology.jraft.Logger {
         this.logger = logger;
     }
 
+    /**
+     * 根据参数输出debug日志
+     * 
+     * @param format
+     * @param args
+     * @see net.data.technology.jraft.Logger#debug(java.lang.String, java.lang.Object[])
+     */
     public void debug(String format, Object... args) {
-        if(args != null){
-            this.logger.debug(String.format(format, args));
-        }else{
-            this.logger.debug(format);
+        if (this.logger.isDebugEnabled()) {
+            if (args != null) {
+                this.logger.debug(String.format(format, args));
+            } else {
+                this.logger.debug(format);
+            }
         }
     }
 
+    /**
+     * 根据参数输出Info日志
+     * 
+     * @param format
+     * @param args
+     * @see net.data.technology.jraft.Logger#info(java.lang.String, java.lang.Object[])
+     */
     public void info(String format, Object... args) {
-        if(args != null){
-            this.logger.info(String.format(format, args));
-        }else{
-            this.logger.info(format);
+        if (this.logger.isInfoEnabled()) {
+            if (args != null) {
+                this.logger.info(String.format(format, args));
+            } else {
+                this.logger.info(format);
+            }
         }
     }
 

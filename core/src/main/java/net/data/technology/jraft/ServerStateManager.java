@@ -23,37 +23,49 @@ package net.data.technology.jraft;
 public interface ServerStateManager {
 
     /**
-     * Load cluster configuration for this server
-     * @return the cluster configuration, never be null
+     * Load cluster configuration for this server <br>
+     * 加载集群服务端 配置
+     * 
+     * @return the cluster configuration, never be null (not null)
      */
     public ClusterConfiguration loadClusterConfiguration();
 
     /**
-     * Save the cluster configuration
+     * Save the cluster configuration <br>
+     * 保存集群服务端 配置
+     * 
      * @param configuration cluster configuration to save
      */
     public void saveClusterConfiguration(ClusterConfiguration configuration);
 
     /**
-     * Save the server state
+     * Save the server state<br>
+     * 保存本集群服务端 状态
+     * 
      * @param serverState server state to persist
      */
     public void persistState(ServerState serverState);
 
     /**
-     * Load server state
+     * Load server state<br>
+     * 加载集群服务端 状态
+     * 
      * @return the server state, never be null
      */
     public ServerState readState();
 
     /**
-     * Load the log store for current server
-     * @return the log store, never be null
+     * Load the log store for current server<br>
+     * 返回集群服务端 日志存储 对象
+     * 
+     * @return the log store, never be null(not null)
      */
     public SequentialLogStore loadLogStore();
 
     /**
-     * Get current server id
+     * Get current server id<br>
+     * 获取当前集群服务端id
+     * 
      * @return server id for this server
      */
     public int getServerId();

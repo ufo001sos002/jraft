@@ -52,11 +52,13 @@ public class LogEntry {
     public LogEntry(long term, byte[] value){
         this(term, value, LogValueType.Application);
     }
+    
     /**
      * 根据参数创建日志对象
-     * @param term
-     * @param value
-     * @param valueType
+     * 
+     * @param term 任期
+     * @param value 数据内容
+     * @param valueType 日志类型
      */
     public LogEntry(long term, byte[] value, LogValueType valueType){
         this.term = term;

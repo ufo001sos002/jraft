@@ -26,11 +26,19 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Raft客户端对象(公共类)
+ */
 public class RaftClient {
-
     private Map<Integer, RpcClient> rpcClients = new HashMap<Integer, RpcClient>();
+    /**
+     * RPC客户端工厂
+     */
     private RpcClientFactory rpcClientFactory;
     private ClusterConfiguration configuration;
+    /**
+     * 系统日志对象
+     */
     private Logger logger;
     private Timer timer;
     private int leaderId;
@@ -100,6 +108,14 @@ public class RaftClient {
         return result;
     }
 
+    /**
+     * 尝试当前主进行 消息请求
+     * 
+     * @param request
+     * @param future
+     * @param rpcBackoff
+     * @param retry
+     */
     private void tryCurrentLeader(RaftRequestMessage request, CompletableFuture<Boolean> future, int rpcBackoff, int retry){
         logger.debug("trying request to %d as current leader", this.leaderId);
         getOrCreateRpcClient().send(request).whenCompleteAsync((RaftResponseMessage response, Throwable error) -> {
