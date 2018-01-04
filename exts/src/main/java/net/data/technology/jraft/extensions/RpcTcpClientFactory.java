@@ -33,6 +33,13 @@ import net.data.technology.jraft.RpcClientFactory;
 public class RpcTcpClientFactory implements RpcClientFactory {
     private ExecutorService executorService;
 
+    /**
+     * <p>
+     * Description: 根据线程池构造RPC客户端工厂
+     * </p>
+     * 
+     * @param executorService
+     */
     public RpcTcpClientFactory(ExecutorService executorService){
         this.executorService = executorService;
     }

@@ -23,7 +23,9 @@ package net.data.technology.jraft;
 public interface RpcClientFactory {
 
     /**
-     * Creates a RpcClient for the given endpoint
+     * Creates a RpcClient for the given endpoint <br>
+     * 根据终端信息创建RPC客户端对象
+     * 
      * @param endpoint endpoint for the server
      * @return an instance of RpcClient
      */

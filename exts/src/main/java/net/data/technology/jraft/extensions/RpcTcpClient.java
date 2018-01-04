@@ -56,6 +56,15 @@ public class RpcTcpClient implements RpcClient {
     private InetSocketAddress remote;
     private Logger logger;
 
+    /**
+     * 
+     * <p>
+     * Description: 根据地址对象、线程池 创建RPC TCP 客户端对象
+     * </p>
+     * 
+     * @param remote
+     * @param executorService
+     */
     public RpcTcpClient(InetSocketAddress remote, ExecutorService executorService){
         this.remote = remote;
         this.logger = LogManager.getLogger(getClass());
@@ -75,7 +84,7 @@ public class RpcTcpClient implements RpcClient {
     public synchronized CompletableFuture<RaftResponseMessage> send(final RaftRequestMessage request) {
         this.logger.debug(String.format("trying to send message %s to server %d at endpoint %s", request.getMessageType().toString(), request.getDestination(), this.remote.toString()));
         CompletableFuture<RaftResponseMessage> result = new CompletableFuture<RaftResponseMessage>();
-        if(this.connection == null || !this.connection.isOpen()){
+        if (this.connection == null || !this.connection.isOpen()) { // 没有连接 则 先创建 后 进行 发送读操作
             try{
                 this.connection = AsynchronousSocketChannel.open(this.channelGroup);
                 this.connection.connect(this.remote, new AsyncTask<RaftRequestMessage>(request, result), handlerFrom((Void v, AsyncTask<RaftRequestMessage> task) -> {

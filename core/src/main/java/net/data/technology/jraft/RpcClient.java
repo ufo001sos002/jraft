@@ -25,8 +25,10 @@ import java.util.concurrent.CompletableFuture;
 public interface RpcClient {
 
     /**
-     * Sends a RaftRequestMessage to peer and read a response from peer
-     * this will not be called concurrently
+     * Sends a RaftRequestMessage to peer and read a response from peer this will not be called
+     * concurrently <br>
+     * 发送Raft请求消息 并返回 Raft响应消息
+     * 
      * @param request Raft rpc request message
      * @return Raft rpc response
      */

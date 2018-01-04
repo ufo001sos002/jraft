@@ -30,21 +30,43 @@ import java.util.concurrent.CompletableFuture;
  * Raft客户端对象(公共类)
  */
 public class RaftClient {
+    /**
+     * K: serverId V: 对应RPC客户端对象
+     */
     private Map<Integer, RpcClient> rpcClients = new HashMap<Integer, RpcClient>();
     /**
      * RPC客户端工厂
      */
     private RpcClientFactory rpcClientFactory;
+    /**
+     * Raft集群配置对象
+     */
     private ClusterConfiguration configuration;
     /**
      * 系统日志对象
      */
     private Logger logger;
     private Timer timer;
+    /**
+     * 当前leader ID 初始化时为随机
+     */
     private int leaderId;
+    /**
+     * 当前处于 随机 leader时候 后续根据返回的leader 进行对leader再次发送消息
+     */
     private boolean randomLeader;
     private Random random;
 
+    /**
+     * 
+     * <p>
+     * Description:根据参数 创建Raft 客户端对象
+     * </p>
+     * 
+     * @param rpcClientFactory RPC客户端工厂
+     * @param configuration RAFT集群配置对象
+     * @param loggerFactory 日志工厂
+     */
     public RaftClient(RpcClientFactory rpcClientFactory, ClusterConfiguration configuration, LoggerFactory loggerFactory){
         this.random = new Random(Calendar.getInstance().getTimeInMillis());
         this.rpcClientFactory = rpcClientFactory;
@@ -55,6 +77,12 @@ public class RaftClient {
         this.timer = new Timer();
     }
 
+    /**
+     * 增加日志
+     * 
+     * @param values 二维字节数组 [x][y] x为日志索引,同x下 y为具体某条x 对应日志内容
+     * @return
+     */
     public CompletableFuture<Boolean> appendEntries(byte[][] values){
         if(values == null || values.length == 0){
             throw new IllegalArgumentException("values cannot be null or empty");
@@ -111,10 +139,10 @@ public class RaftClient {
     /**
      * 尝试当前主进行 消息请求
      * 
-     * @param request
-     * @param future
+     * @param request 请求消息
+     * @param future 结果
      * @param rpcBackoff
-     * @param retry
+     * @param retry 当前重试次数
      */
     private void tryCurrentLeader(RaftRequestMessage request, CompletableFuture<Boolean> future, int rpcBackoff, int retry){
         logger.debug("trying request to %d as current leader", this.leaderId);
@@ -135,7 +163,7 @@ public class RaftClient {
                 }
             }else{
                 logger.info("rpc error, failed to send request to remote server (%s)", error.getMessage());
-                if(retry > configuration.getServers().size()){
+                if(retry > configuration.getServers().size()){ // 重试次数大于 当前服务器节点数 则默认失败
                     future.complete(false);
                     return;
                 }
@@ -160,12 +188,17 @@ public class RaftClient {
         });
     }
 
+    /**
+     * 获取 或 创建 前{@link #leaderId} 对应的RPC Client对象
+     * 
+     * @return 当前{@link #leaderId} 对应的 RPC Client对象
+     */
     private RpcClient getOrCreateRpcClient(){
         synchronized(this.rpcClients){
-            if(this.rpcClients.containsKey(this.leaderId)){
+            if (this.rpcClients.containsKey(this.leaderId)) { // 判断当前leaderId 对应 RPC 客户端对象是否存在
                 return this.rpcClients.get(this.leaderId);
             }
-
+            // 不存在 则创建
             RpcClient client = this.rpcClientFactory.createRpcClient(getLeaderEndpoint());
             this.rpcClients.put(this.leaderId, client);
             return client;
