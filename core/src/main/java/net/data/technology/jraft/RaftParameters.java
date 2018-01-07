@@ -16,7 +16,9 @@
  */
 
 package net.data.technology.jraft;
-
+/**
+ * Raft参数对象
+ */
 public class RaftParameters {
     /**
      * Election timeout upper bound in milliseconds<br/>
@@ -49,6 +51,7 @@ public class RaftParameters {
 
     /**
      * The tcp block size for syncing the snapshots
+     * 设置{@link #snapshotBlockSize}值
      * @param size size of sync block
      * @return self
      */
@@ -59,6 +62,7 @@ public class RaftParameters {
 
     /**
      * Enable log compact and snapshot with the commit distance
+     * 设置{@link #snapshotDistance}值
      * @param distance log distance to compact between two snapshots
      * @return self
      */
@@ -71,6 +75,7 @@ public class RaftParameters {
      * For new member that just joined the cluster, we will use log sync to ask it to catch up,
      * and this parameter is to tell when to stop using log sync but appendEntries for the new server
      * when leaderCommitIndex - indexCaughtUp &lt; logSyncStopGap, then appendEntries will be used
+     * 设置{@link #logSyncStopGap}值
      * @param logSyncStopGap the log gap to stop log pack-and-sync feature
      * @return self
      */
@@ -82,6 +87,7 @@ public class RaftParameters {
     /**
      * For new member that just joined the cluster, we will use log sync to ask it to catch up,
      * and this parameter is to specify how many log entries to pack for each sync request
+     * 设置{@link #logSyncBatchSize}值
      * @param logSyncBatchSize the batch size fo pack-and-sync feature
      * @return self
      */
@@ -92,6 +98,7 @@ public class RaftParameters {
 
     /**
      * The maximum log entries could be attached to an appendEntries call
+     * 设置{@link #maxAppendingSize}值
      * @param maxAppendingSize size limit for appendEntries call
      * @return self
      */
@@ -102,6 +109,7 @@ public class RaftParameters {
 
     /**
      * Election timeout upper bound in milliseconds
+     * 设置{@link #electionTimeoutUpperBound}值
      * @param electionTimeoutUpper election timeout upper value
      * @return self
      */
@@ -112,6 +120,7 @@ public class RaftParameters {
 
     /**
      * Election timeout lower bound in milliseconds
+     * 设置{@link #electionTimeoutLowerBound}值
      * @param electionTimeoutLower election timeout lower value
      * @return self
      */
@@ -122,6 +131,7 @@ public class RaftParameters {
 
     /**
      * heartbeat interval in milliseconds
+     * 设置{@link #heartbeatInterval}值
      * @param heartbeatInterval heart beat interval
      * @return self
      */
@@ -132,6 +142,7 @@ public class RaftParameters {
 
     /**
      * Rpc failure backoff in milliseconds
+     * 设置{@link #rpcFailureBackoff}值
      * @param rpcFailureBackoff rpc failure back off
      * @return self
      */
@@ -142,7 +153,7 @@ public class RaftParameters {
 
     /**
      * Upper value for election timeout
-     * @return upper of election timeout in milliseconds
+     * @return upper of election timeout in milliseconds 返回{@link #electionTimeoutUpperBound}值
      */
     public int getElectionTimeoutUpperBound() {
         return electionTimeoutUpperBound;
@@ -150,7 +161,7 @@ public class RaftParameters {
 
     /**
      * Lower value for election timeout
-     * @return lower of election timeout in milliseconds
+     * @return lower of election timeout in milliseconds 返回{@link #electionTimeoutLowerBound}值
      */
     public int getElectionTimeoutLowerBound() {
         return electionTimeoutLowerBound;
@@ -158,7 +169,7 @@ public class RaftParameters {
 
     /**
      * Heartbeat interval for each peer
-     * @return heartbeat interval in milliseconds
+     * @return heartbeat interval in milliseconds 返回{@link #heartbeatInterval}值
      */
     public int getHeartbeatInterval() {
         return heartbeatInterval;
@@ -166,7 +177,7 @@ public class RaftParameters {
 
     /**
      * Rpc backoff for peers that failed to be connected
-     * @return rpc backoff in milliseconds
+     * @return rpc backoff in milliseconds 返回{@link #rpcFailureBackoff}值
      */
     public int getRpcFailureBackoff() {
         return rpcFailureBackoff;
@@ -174,6 +185,7 @@ public class RaftParameters {
 
     /**
      * The maximum heartbeat interval, any value beyond this may lead to election timeout for a peer before receiving a heartbeat
+     *  <br>返回max({@link #rpcFailureBackoff}, ({@link #electionTimeoutLowerBound} - {@link #heartbeatInterval} / 2))值
      * @return maximum heartbeat interval (including rpc backoff) in milliseconds
      */
     public int getMaxHeartbeatInterval(){
@@ -182,7 +194,7 @@ public class RaftParameters {
 
     /**
      * The batch size for each ReplicateLogRequest message
-     * @return batch size in bytes
+     * @return batch size in bytes 返回{@link #logSyncBatchSize}值
      */
     public int getLogSyncBatchSize() {
         return logSyncBatchSize;
@@ -191,7 +203,7 @@ public class RaftParameters {
     /**
      * the max gap allowed for log sync, if the gap between the client and leader is less than this value,
      * the ReplicateLogRequest will be stopped
-     * @return maximum gap allowed in bytes for log sync
+     * @return maximum gap allowed in bytes for log sync 返回{@link #logSyncStopGap}值
      */
     public int getLogSyncStopGap() {
         return logSyncStopGap;
@@ -200,7 +212,7 @@ public class RaftParameters {
     /**
      * The commit distances for snapshots, zero means don't take any snapshots
      * 
-     * @return commit distances for log store {@link #snapshotDistance}
+     * @return commit distances for log store 返回{@link #snapshotDistance}值
      */
     public int getSnapshotDistance(){
         return this.snapshotDistance;
@@ -208,7 +220,7 @@ public class RaftParameters {
 
     /**
      * The block size to sync while syncing snapshots to peers
-     * @return block size in bytes
+     * @return block size in bytes 返回{@link #snapshotBlockSize}值
      */
     public int getSnapshotBlockSize() {
         return snapshotBlockSize;
@@ -216,7 +228,7 @@ public class RaftParameters {
 
     /**
      * The maximum log entries in an appendEntries request
-     * @return maximum log entries
+     * @return maximum log entries 返回{@link #maxAppendingSize}值
      */
     public int getMaximumAppendingSize(){
         return this.maxAppendingSize;

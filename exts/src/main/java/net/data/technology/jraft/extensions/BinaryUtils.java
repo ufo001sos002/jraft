@@ -39,7 +39,7 @@ public class BinaryUtils {
 	 */
     public static final int RAFT_RESPONSE_HEADER_SIZE = Integer.BYTES * 2 + Long.BYTES * 2 + 2;
     /**
-     * Raft 请求包 头固定 大小(当前只为固定包头大小)
+     * Raft 请求包 头固定 大小(当前只为固定包头大小  不包含日志体具体内容)
      */
     public static final int RAFT_REQUEST_HEADER_SIZE = Integer.BYTES * 3 + Long.BYTES * 4 + 1;
     /**
@@ -170,7 +170,14 @@ public class BinaryUtils {
 
         return requestBuffer.array();
     }
-
+    
+    /**
+     * 根据Raft消息请求 头字节数组 将内容生成 {@link Pair} 对象
+     * <br>将除日志数据外 其他头内容写入 {@link RaftRequestMessage}中即({@link Pair#first}), 后续日志长度 写入 Integer中即({@link Pair#second})
+     * @param data Raft消息头内容
+     * @return
+     * @throws IllegalArgumentException data为null 或 长度不满足 {@link #RAFT_REQUEST_HEADER_SIZE} (Raft消息请求头长度)
+     */
     public static Pair<RaftRequestMessage, Integer> bytesToRequestMessage(byte[] data){
         if(data == null || data.length != RAFT_REQUEST_HEADER_SIZE){
             throw new IllegalArgumentException("invalid request message header.");
@@ -209,12 +216,13 @@ public class BinaryUtils {
         }
     }
     /**
-     *  字节数组转为 日志对象数组
+     *  字节数组转为 日志内容 对象数组
      * @param data
      * @return
+     * @throws IllegalArgumentException data为null 或长度 小于 最基本  term({@link Long#BYTES}) + valueType({@link Byte#BYTES}) + valueSize({@link Integer#BYTES}) 字段长度时
      */
     public static LogEntry[] bytesToLogEntries(byte[] data){
-        if(data == null || data.length < Long.BYTES + Integer.BYTES){
+        if(data == null || data.length < Long.BYTES + Integer.BYTES + Byte.BYTES){// 
             throw new IllegalArgumentException("invalid log entries data");
         }
         ByteBuffer buffer = ByteBuffer.wrap(data);

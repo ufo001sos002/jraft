@@ -21,6 +21,10 @@ package net.data.technology.jraft;
  * Raft消息处理
  */
 public interface RaftMessageHandler {
-
+	/**
+	 * 处理请求消息
+	 * @param request Raft请求消息对象
+	 * @return Raft回包消息对象
+	 */
     public RaftResponseMessage processRequest(RaftRequestMessage request);
 }

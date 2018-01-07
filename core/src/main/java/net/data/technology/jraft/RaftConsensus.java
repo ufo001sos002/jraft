@@ -28,7 +28,7 @@ public class RaftConsensus {
             throw new IllegalArgumentException("context cannot be null");
         }
 
-        RaftServer server = new RaftServer(context);
+        RaftServer server = new RaftServer(context);// 服务端Raft消息处理类
         RaftMessageSender messageSender = server.createMessageSender();
         context.getStateMachine().start(messageSender);
         context.getRpcListener().startListening(server);

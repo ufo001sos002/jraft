@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Raft 服务器
+ * Raft 服务器(Raft消息处理类)
  */
 public class RaftServer implements RaftMessageHandler {
 	/**
@@ -110,7 +110,11 @@ public class RaftServer implements RaftMessageHandler {
     private int steppingDown = 0;
     private AtomicInteger snapshotInProgress;
     // end fields for extended messages
-
+    /**
+     * 
+     * 根据参数构造 类{@link RaftServer} 对象
+     * @param context
+     */
     public RaftServer(RaftContext context){
         this.id = context.getServerStateManager().getServerId();
         this.state = context.getServerStateManager().readState();
@@ -181,7 +185,11 @@ public class RaftServer implements RaftMessageHandler {
         this.restartElectionTimer();
         this.logger.info("Server %d started", this.id);
     }
-
+    
+    /**
+     * 返回具体Raft消息发送者对象
+     * @return {@link RaftMessageSender} 实现类对象
+     */
     public RaftMessageSender createMessageSender(){
         return new RaftMessageSenderImpl(this);
     }

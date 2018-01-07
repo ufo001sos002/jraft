@@ -24,12 +24,15 @@ public interface RpcListener {
 
     /**
      * Starts listening and handle all incoming messages with messageHandler
-     * @param messageHandler the  message handler to handle all incoming requests
+     * <br>开始侦听并使用消息处理对象 处理所有传入消息
+     * @param messageHandler the message handler to handle all incoming requests<br>
+     * 消息处理对象 处理所有传入请求的消息处理程序
      */
     public void startListening(RaftMessageHandler messageHandler);
 
     /**
      * Stop listening and clean up
+     * <br>关闭监听和清除
      */
     public void stop();
 }

@@ -59,7 +59,7 @@ public class RpcTcpClient implements RpcClient {
     /**
      * 
      * <p>
-     * Description: 根据地址对象、线程池 创建RPC TCP 客户端对象
+     * Description: 根据Raft Server地址对象、线程池 创建RPC TCP 客户端对象
      * </p>
      * 
      * @param remote

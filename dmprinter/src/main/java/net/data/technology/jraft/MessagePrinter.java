@@ -71,7 +71,12 @@ public class MessagePrinter implements StateMachine {
     private ExecutorService executorService;
     private RaftMessageSender messageSender;
     private Map<String, CompletableFuture<String>> uncommittedRequests = new ConcurrentHashMap<String, CompletableFuture<String>>();
-
+    /**
+     * 
+     * 根据参数构造 类{@link MessagePrinter}对象
+     * @param baseDir
+     * @param listeningPort
+     */
     public MessagePrinter(Path baseDir, int listeningPort){
         this.port = listeningPort;
         this.logger = LogManager.getLogger(getClass());

@@ -45,7 +45,8 @@ public class AsyncUtility {
         };
     }
     /**
-     * 从通道中读取数据
+     * 从通道中读取数据<br>
+     * <b>注:本方法 连接关闭 或 Buffer 读满 才调用完成，即:通道不关闭的情况下，将 继续读满buffer 否则持续等待</b>
      * @param channel
      * @param buffer 读取的buffer
      * @param attachment 附件对象
@@ -59,7 +60,7 @@ public class AsyncUtility {
                     handlerFrom(
                     (Integer result, AsyncContext<A> a) -> {
                         int bytesRead = result.intValue();
-                        if(bytesRead == -1 || !buffer.hasRemaining()){
+                        if(bytesRead == -1 || !buffer.hasRemaining()){// 连接关闭 或 Buffer 收完 才调用完成 否则 继续读满buffer
                             a.completionHandler.completed(buffer.position(), a.attachment);
                         }else{
                             readFromChannel(channel, buffer, a.attachment, a.completionHandler);
@@ -75,6 +76,7 @@ public class AsyncUtility {
     
     /**
      * 写数据至通道
+     * <b>注:本方法 连接关闭 或 Buffer 发完 才调用完成，即:通道不关闭的情况下，将 继续把buffer发完 </b>
      * @param channel
      * @param buffer 需写的数据
      * @param attachment 附件对象
