@@ -146,7 +146,7 @@ public class RpcTcpListener implements RpcListener {
         ByteBuffer buffer = ByteBuffer.allocate(BinaryUtils.RAFT_REQUEST_HEADER_SIZE);
         try{
             AsyncUtility.readFromChannel(connection, buffer, messageHandler, handlerFrom((Integer bytesRead, final RaftMessageHandler handler) -> {
-                if(bytesRead.intValue() < BinaryUtils.RAFT_REQUEST_HEADER_SIZE){// 满足此条件情况 只有 连接 断开
+                if(bytesRead.intValue() < BinaryUtils.RAFT_REQUEST_HEADER_SIZE){// 未满足此条件情况 只有 连接 断开 或收包异常  进入此方法前将一直等待收报完成
                 	if(logger.isInfoEnabled()) {	
                 		logger.info("failed to read the request header from client socket");
                 	}
@@ -161,15 +161,19 @@ public class RpcTcpListener implements RpcListener {
                         if(requestInfo.getSecond().intValue() > 0){// 有日志内容
                             ByteBuffer logBuffer = ByteBuffer.allocate(requestInfo.getSecond().intValue());
                             AsyncUtility.readFromChannel(connection, logBuffer, null, handlerFrom((Integer size, Object attachment) -> {
-                                if(size.intValue() < requestInfo.getSecond().intValue()){
-                                    logger.info("failed to read the log entries data from client socket");
+                                if(size.intValue() < requestInfo.getSecond().intValue()){ // 未满足此条件情况 只有 连接 断开 或收包异常  进入此方法前将一直等待收报完成
+                                    if(logger.isInfoEnabled()) {
+                                    	logger.info("failed to read the log entries data from client socket");
+                                    }
                                     closeSocket(connection);
                                 }else{
                                     try{
                                         requestInfo.getFirst().setLogEntries(BinaryUtils.bytesToLogEntries(logBuffer.array()));
                                         processRequest(connection, requestInfo.getFirst(), handler);
                                     }catch(Throwable error){
-                                        logger.info("log entries parsing error", error);
+                                    	if(logger.isInfoEnabled()) {
+                                    		logger.info("log entries parsing error", error);
+                                    	}
                                         closeSocket(connection);
                                     }
                                 }
@@ -194,7 +198,7 @@ public class RpcTcpListener implements RpcListener {
         }
     }
     /**
-     * 处理Raft消息处理对象 处理 请求消息 并发送回包
+     * Raft消息处理对象 处理 请求消息 并发送回包
      * @param connection
      * @param request
      * @param messageHandler
@@ -204,14 +208,18 @@ public class RpcTcpListener implements RpcListener {
             RaftResponseMessage response = messageHandler.processRequest(request);
             final ByteBuffer buffer = ByteBuffer.wrap(BinaryUtils.messageToBytes(response));
             AsyncUtility.writeToChannel(connection, buffer, null, handlerFrom((Integer bytesSent, Object attachment) -> {
-                if(bytesSent.intValue() < buffer.limit()){
-                    logger.info("failed to completely send the response.");
+                if(bytesSent.intValue() < buffer.limit()){ // 进入此方法时 除非异常 或 连接关闭 否则 包已全部发完 符合该条件
+                	if(logger.isInfoEnabled()) {
+                		logger.info("failed to completely send the response.");
+                	}
                     closeSocket(connection);
                 }else{
-                    logger.debug("response message sent.");
+                	if(logger.isDebugEnabled()) {
+                		logger.debug("response message sent.");
+                	}
                     if(connection.isOpen()){
                         logger.debug("try to read next request");
-                        readRequest(connection, messageHandler);
+                        readRequest(connection, messageHandler); // 循环读包
                     }
                 }
             }, connection));
