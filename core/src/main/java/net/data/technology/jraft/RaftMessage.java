@@ -29,7 +29,7 @@ public class RaftMessage {
      */
     private int source;
     /**
-     * 目标
+     * 目的地
      */
     private int destination;
     /**

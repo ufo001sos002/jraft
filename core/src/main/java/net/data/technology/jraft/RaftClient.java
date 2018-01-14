@@ -48,11 +48,12 @@ public class RaftClient {
     private Logger logger;
     private Timer timer;
     /**
-     * 当前leader ID 初始化时为随机
+     * 当前leader ID (初始化时为随机)
      */
     private int leaderId;
     /**
-     * 当前处于 随机 leader时候 后续根据返回的leader 进行对leader再次发送消息
+     * 当前处于 随机 leader时候 后续根据返回的leader 进行对leader再次发送消息<br>
+     * true 表示 当前为随机leader(初始值为true)
      */
     private boolean randomLeader;
     private Random random;
@@ -71,8 +72,8 @@ public class RaftClient {
         this.random = new Random(Calendar.getInstance().getTimeInMillis());
         this.rpcClientFactory = rpcClientFactory;
         this.configuration = configuration;
-        this.leaderId = configuration.getServers().get(this.random.nextInt(configuration.getServers().size())).getId();
-        this.randomLeader = true;
+        this.leaderId = configuration.getServers().get(this.random.nextInt(configuration.getServers().size())).getId();// 最初始随机leaderId
+        this.randomLeader = true;// 表示当前随机leader
         this.logger = loggerFactory.getLogger(getClass());
         this.timer = new Timer();
     }
@@ -149,16 +150,16 @@ public class RaftClient {
         getOrCreateRpcClient().send(request).whenCompleteAsync((RaftResponseMessage response, Throwable error) -> {
             if(error == null){
                 logger.debug("response from remote server, leader: %d, accepted: %s", response.getDestination(), String.valueOf(response.isAccepted()));
-                if(response.isAccepted()){
-                    future.complete(true);
-                }else{
+                if(response.isAccepted()){ // 判断发送日志是否被leader接受
+                    future.complete(true); //接受
+                }else{ // 未接受
                     // set the leader return from the server
-                    if(this.leaderId == response.getDestination() && !this.randomLeader){
-                        future.complete(false);
+                    if(this.leaderId == response.getDestination() && !this.randomLeader){ // 则判断当前是否为随机leader(即非leader)
+                        future.complete(false); // 表明发往的为Leader,置发送日志任务结束  且发送的日志 不被接受
                     }else{
-                        this.randomLeader = false;
-                        this.leaderId = response.getDestination();
-                        tryCurrentLeader(request, future, rpcBackoff, retry);
+                        this.randomLeader = false;// 置为非随机 因为 集群已返回当前 leader id
+                        this.leaderId = response.getDestination(); // 设置当前leaderId
+                        tryCurrentLeader(request, future, rpcBackoff, retry); // 并重新向leader发送日志消息
                     }
                 }
             }else{

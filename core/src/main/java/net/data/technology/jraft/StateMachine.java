@@ -47,9 +47,10 @@ public interface StateMachine {
     public void rollback(long logIndex, byte[] data);
 
     /**
-     * PreCommit a log entry at log index {@code logIndex}
-     * @param logIndex the log index to commit
-     * @param data application data for pre-commit
+     * PreCommit a log entry at log index {@code logIndex}<br>
+     * 在当前index(索引位置) 预提交 日志实体
+     * @param logIndex the log index to commit 日志提交的index(索引位置)
+     * @param data application data for pre-commit 预提交的日志内容
      */
     public void preCommit(long logIndex, byte[] data);
 

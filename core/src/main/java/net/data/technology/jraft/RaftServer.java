@@ -351,17 +351,22 @@ public class RaftServer implements RaftMessageHandler {
 
         return response;
     }
-
+    
+    /**
+     * 处理{@link RaftMessageType#ClientRequest} 类型 请求消息
+     * @param request
+     * @return
+     */
     private RaftResponseMessage handleClientRequest(RaftRequestMessage request){
         RaftResponseMessage response = new RaftResponseMessage();
         response.setMessageType(RaftMessageType.AppendEntriesResponse);
-        response.setSource(this.id);
-        response.setDestination(this.leader);
-        response.setTerm(this.state.getTerm());
+        response.setSource(this.id);// 当前来源Id
+        response.setDestination(this.leader); // 当前leader id  可用于告诉客户端当前 集群leader Id
+        response.setTerm(this.state.getTerm()); // 当前任期
 
         long term;
         synchronized(this){
-            if(this.role != ServerRole.Leader){
+            if(this.role != ServerRole.Leader){ // 如果当前server 非 集群leader 则告知client 重连
                 response.setAccepted(false);
                 return response;
             }

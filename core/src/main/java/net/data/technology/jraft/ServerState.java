@@ -34,30 +34,50 @@ public class ServerState {
      */
     private int votedFor;
 
-    public long getTerm() {
-        return term;
-    }
+    /**
+	 * @return 返回 {@link #term}值
+	 */
+	public long getTerm() {
+		return term;
+	}
 
-    public void setTerm(long term) {
-        this.term = term;
-    }
+	/**
+	 * @param 用参数term设置 {@link #term}
+	 */
+	public void setTerm(long term) {
+		this.term = term;
+	}
 
-    public int getVotedFor() {
-        return votedFor;
-    }
+	/**
+	 * @return 返回 {@link #votedFor}值
+	 */
+	public int getVotedFor() {
+		return votedFor;
+	}
 
-    public void setVotedFor(int votedFor) {
-        this.votedFor = votedFor;
-    }
+	/**
+	 * @param 用参数votedFor设置 {@link #votedFor}
+	 */
+	public void setVotedFor(int votedFor) {
+		this.votedFor = votedFor;
+	}
 
-    public void increaseTerm(){
+	/**
+	 * @return 返回 {@link #commitIndex}值
+	 */
+	public long getCommitIndex() {
+		return commitIndex;
+	}
+	/**
+	 * 当前{@link #term} +1
+	 */
+	public void increaseTerm(){
         this.term += 1;
     }
-
-    public long getCommitIndex() {
-        return commitIndex;
-    }
-
+	
+	/**
+	 * @param 用参数commitIndex设置 {@link #commitIndex} 大于才会生效
+	 */
     public void setCommitIndex(long commitIndex) {
         if(commitIndex > this.commitIndex){
             this.commitIndex = commitIndex;
