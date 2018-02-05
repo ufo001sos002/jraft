@@ -116,7 +116,7 @@ public class App
                     values.add(tokenizer.nextToken());
                 }
 
-                if(values.size() == 3){
+                if(values.size() == 3){ // 增加服务器
                     ClusterServer server = new ClusterServer();
                     server.setEndpoint(values.get(2));
                     server.setId(Integer.parseInt(values.get(1)));
@@ -124,7 +124,7 @@ public class App
                     System.out.println("Accepted: " + String.valueOf(accepted));
                     continue;
                 }
-            }else if(message.startsWith("fmt:")){
+            }else if(message.startsWith("fmt:")){// 增加日志
                 String format = message.substring(4);
                 System.out.print("How many?");
                 String countValue = reader.readLine();
@@ -135,7 +135,7 @@ public class App
                     System.out.println("Accepted: " + String.valueOf(accepted));
                 }
                 continue;
-            }else if(message.startsWith("rmsrv:")){
+            }else if(message.startsWith("rmsrv:")){ // 移除服务器
                 String text = message.substring(6);
                 int serverId = Integer.parseInt(text.trim());
                 boolean accepted = client.removeServer(serverId).get();

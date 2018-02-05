@@ -102,7 +102,11 @@ public class RaftClient {
         this.tryCurrentLeader(request, result, 0, 0);
         return result;
     }
-
+    /**
+     * 发送增加服务器消息
+     * @param server
+     * @return
+     */
     public CompletableFuture<Boolean> addServer(ClusterServer server){
         if(server == null){
             throw new IllegalArgumentException("server cannot be null");
@@ -118,7 +122,12 @@ public class RaftClient {
         this.tryCurrentLeader(request, result, 0, 0);
         return result;
     }
-
+    
+    /**
+     * 移除服务器
+     * @param serverId
+     * @return
+     */
     public CompletableFuture<Boolean> removeServer(int serverId){
         if(serverId < 0){
             throw new IllegalArgumentException("serverId must be equal or greater than zero");

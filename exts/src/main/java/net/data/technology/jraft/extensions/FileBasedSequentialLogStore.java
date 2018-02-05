@@ -43,16 +43,41 @@ import org.apache.log4j.Logger;
 import net.data.technology.jraft.LogEntry;
 import net.data.technology.jraft.LogValueType;
 import net.data.technology.jraft.SequentialLogStore;
-
+/**
+ * 基于文件的顺序日志存储
+ */
 public class FileBasedSequentialLogStore implements SequentialLogStore {
-
+	/**
+	 * 日志存储索引文件名
+	 */
     private static final String LOG_INDEX_FILE = "store.idx";
+    /**
+     * 日志存储数据文件名
+     */
     private static final String LOG_STORE_FILE = "store.data";
+    /**
+     * 日志存储开始索引文件名
+     */
     private static final String LOG_START_INDEX_FILE = "store.sti";
+    /**
+     * 日志存储索引文件 备份文件名
+     */
     private static final String LOG_INDEX_FILE_BAK = "store.idx.bak";
+    /**
+     * 日志存储数据文件 备份文件名
+     */
     private static final String LOG_STORE_FILE_BAK = "store.data.bak";
+    /**
+     * 日志存储开始索引备份文件名
+     */
     private static final String LOG_START_INDEX_FILE_BAK = "store.sti.bak";
+    /**
+     * 任期为0 数据为null的日志记录对象
+     */
     private static final LogEntry zeroEntry = new LogEntry();
+    /**
+     * buffer 大小 默认:{@value} 
+     */
     private static final int BUFFER_SIZE = 1000;
 
     private Logger logger;
@@ -62,8 +87,17 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
     private long entriesInStore;
     private long startIndex;
     private Path logContainer;
+    /**
+     * 存储文件读写锁
+     */
     private ReentrantReadWriteLock storeLock;
+    /**
+     * 存储文件读锁
+     */
     private ReadLock storeReadLock;
+    /**
+     * 存储文件写锁
+     */
     private WriteLock storeWriteLock;
     private LogBuffer buffer;
     private int bufferSize;
