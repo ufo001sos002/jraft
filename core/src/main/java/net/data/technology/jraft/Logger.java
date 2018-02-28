@@ -19,7 +19,7 @@ package net.data.technology.jraft;
 
 public interface Logger {
     /**
-     * 自定义实现根据参数输出debug日志(必须保证不在改级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出debug日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
      * @param args
@@ -27,7 +27,7 @@ public interface Logger {
     public void debug(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出info日志(必须保证不在改级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出info日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
      * @param args
@@ -35,7 +35,7 @@ public interface Logger {
     public void info(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出warning日志(必须保证不在改级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出warning日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
      * @param args
@@ -43,7 +43,7 @@ public interface Logger {
     public void warning(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出error日志(必须保证不在改级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出error日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
      * @param args
@@ -51,7 +51,7 @@ public interface Logger {
     public void error(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出error日志(必须保证不在改级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出error日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
      * @param args
