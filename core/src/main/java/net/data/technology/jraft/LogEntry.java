@@ -46,8 +46,8 @@ public class LogEntry {
     }
     /**
      * 根据参数创建 {@link LogValueType#Application }应用程序相关 类型的日志对象
-     * @param term
-     * @param value
+     * @param term 任期
+     * @param value 数据内容
      */
     public LogEntry(long term, byte[] value){
         this(term, value, LogValueType.Application);
