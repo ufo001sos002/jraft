@@ -94,6 +94,9 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
      */
     private RandomAccessFile dataFile;
     private RandomAccessFile startIndexFile;
+    /**
+     * 存储的日志数
+     */
     private long entriesInStore;
     private long startIndex;
     private Path logContainer;
@@ -181,7 +184,7 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             buffer.putLong(logEntry.getTerm());
             buffer.put(logEntry.getValueType().toByte());
             buffer.put(logEntry.getValue());
-            this.dataFile.write(buffer.array());
+            this.dataFile.write(buffer.array());// 将日志写入文件
             this.entriesInStore += 1;
             this.buffer.append(logEntry);
             return this.entriesInStore + this.startIndex - 1;
@@ -620,13 +623,33 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
         return new LogEntry(term, Arrays.copyOfRange(entryData, Long.BYTES + 1, entryData.length), LogValueType.fromByte(valueType));
     }
     
+    /**
+     * 日志缓存类
+     */
     public static class LogBuffer{
-
+    	/**
+    	 * 日志对象 集合
+    	 */
         private List<LogEntry> buffer;
+        /**
+         * 读写锁 对象
+         */
         private ReentrantReadWriteLock bufferLock;
+        /**
+         * 读锁 对象
+         */
         private ReadLock bufferReadLock;
+        /**
+         * 写锁 对象
+         */
         private WriteLock bufferWriteLock;
+        /**
+         * 起始索引位置
+         */
         private long startIndex;
+        /**
+         * 最大大小
+         */
         private int maxSize;
         
         public LogBuffer(long startIndex, int maxSize){
