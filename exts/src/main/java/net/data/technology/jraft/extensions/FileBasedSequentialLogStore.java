@@ -652,6 +652,12 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
          */
         private int maxSize;
         
+        /**
+         * 
+         * 根据参数构造 类{@link #startIndex} {@link #maxSize}对象
+         * @param startIndex
+         * @param maxSize
+         */
         public LogBuffer(long startIndex, int maxSize){
             this.startIndex = startIndex;
             this.maxSize = maxSize;
@@ -660,7 +666,10 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             this.bufferWriteLock = this.bufferLock.writeLock();
             this.buffer = new ArrayList<LogEntry>();
         }
-        
+        /**
+         * 
+         * @return 最后索引的位置 {@link #startIndex} + {@link #buffer}的size
+         */
         public long lastIndex(){
             try{
                 this.bufferReadLock.lock();
@@ -669,7 +678,10 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 this.bufferReadLock.unlock();
             }
         }
-        
+        /**
+         * 
+         * @return 当前起始位置 {@link #startIndex} 
+         */
         public long firstIndex(){
             try{
                 this.bufferReadLock.lock();
@@ -678,7 +690,10 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 this.bufferReadLock.unlock();
             }
         }
-        
+        /**
+         * 
+         * @return 最后日志 无则返回null
+         */
         public LogEntry lastEntry(){
             try{
                 this.bufferReadLock.lock();
@@ -691,7 +706,11 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 this.bufferReadLock.unlock();
             }
         }
-        
+        /**
+         * 返回索引位置的日志
+         * @param index
+         * @return 对应位置无则返回null
+         */
         public LogEntry entryAt(long index){
             try{
                 this.bufferReadLock.lock();
@@ -707,21 +726,31 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
         }
         
         // [start, end), returns the startIndex
+        /**
+         * 从起始结束位置起 填充 result数组, 仅填充有效部分
+         * @param start
+         * @param end
+         * @param result
+         * @return 起始位置 {@link #startIndex}
+         */
         public long fill(long start, long end, LogEntry[] result){
             try{
                 this.bufferReadLock.lock();
+                if(result == null) {
+                	return this.startIndex; 
+                }
                 if(end < this.startIndex){
                     return this.startIndex;
                 }
                 
                 int offset = (int)(start - this.startIndex);
                 if(offset > 0){
-                    for(int i = 0; i < (int)(end - start); ++i, ++offset){
+                    for(int i = 0; i < (int)(end - start) && offset < buffer.size() && i < result.length; ++i, ++offset){
                         result[i] = this.buffer.get(offset);
                     }
                 }else{
                     offset *= -1;
-                    for(int i = 0; i < (int)(end - this.startIndex); ++i, ++offset){
+                    for(int i = 0; i < (int)(end - this.startIndex) && i < buffer.size() && offset < result.length; ++i, ++offset){
                         result[offset] = this.buffer.get(i);
                     }
                 }
@@ -733,6 +762,10 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
         }
         
         // trimming the buffer [fromIndex, end)
+        /**
+         * 清空从起始位置的 日志 
+         * @param fromIndex
+         */
         public void trim(long fromIndex){
             try{
                 this.bufferWriteLock.lock();
@@ -746,6 +779,11 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
         }
         
         // trimming the buffer [fromIndex, endIndex)
+        /**
+         * 清除起始位置 至结束 位置的日志 如果起始位置 等于 {@link #startIndex} 则将重置{@link #startIndex} 为结束位置
+         * @param fromIndex
+         * @param endIndex
+         */
         public void trim(long fromIndex, long endIndex){
             try{
                 this.bufferWriteLock.lock();
@@ -764,6 +802,10 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             }
         }
         
+        /**
+         * 追加日志，并保证不超过{@link #maxSize}大小
+         * @param entry
+         */
         public void append(LogEntry entry){
             try{
                 this.bufferWriteLock.lock();
@@ -776,7 +818,10 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 this.bufferWriteLock.unlock();
             }
         }
-        
+        /**
+         * 重置起始位置，并清除{@link #buffer} 内容
+         * @param startIndex
+         */
         public void reset(long startIndex){
             try{
                 this.bufferWriteLock.lock();
