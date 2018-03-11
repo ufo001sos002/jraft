@@ -76,10 +76,12 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
      */
     private static final LogEntry zeroEntry = new LogEntry();
     /**
-     * buffer 大小 默认:{@value} 
+     * 默认buffer 大小 默认:{@value} 
      */
     private static final int BUFFER_SIZE = 1000;
-    
+    /**
+     * 原生log对象，需判断 {@link Logger#isDebugEnabled()}/{@link Logger#isInfoEnabled()}
+     */
     private Logger logger;
     /**
      * 文件对象
@@ -93,12 +95,23 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
      * 存储数据：每条日志数据内容
      */
     private RandomAccessFile dataFile;
+    /**
+     * 文件对象
+     * 文件名： {@link #LOG_START_INDEX_FILE} 
+     * 存储数据：日志开始索引 记录文件
+     */
     private RandomAccessFile startIndexFile;
     /**
      * 存储的日志数
      */
     private long entriesInStore;
+    /**
+     * 日志开始索引位置
+     */
     private long startIndex;
+    /**
+     * 日志存储目录
+     */
     private Path logContainer;
     /**
      * 存储文件读写锁
@@ -112,35 +125,55 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
      * 存储文件写锁
      */
     private WriteLock storeWriteLock;
+    /**
+     * 日志缓存类
+     */
     private LogBuffer buffer;
+    /**
+     * 当前日志buffer大小
+     */
     private int bufferSize;
 
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象
+     * 复用 {@link #FileBasedSequentialLogStore(String, int)} 构造方法, int 默认为 {@link #BUFFER_SIZE} 的值
+     * @param logContainer 日志目录
+     */
     public FileBasedSequentialLogStore(String logContainer){
         this(logContainer, BUFFER_SIZE);
     }
-    
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象
+     * @param logContainer 日志文件目录
+     * @param bufferSize 日志buffer大小
+     */
     public FileBasedSequentialLogStore(String logContainer, int bufferSize){
-        this.storeLock = new ReentrantReadWriteLock();
-        this.storeReadLock = this.storeLock.readLock();
-        this.storeWriteLock = this.storeLock.writeLock();
-        this.logContainer = Paths.get(logContainer);
+        this.storeLock = new ReentrantReadWriteLock();// 构造存储 读写锁
+        this.storeReadLock = this.storeLock.readLock(); // 获取 存储 读锁
+        this.storeWriteLock = this.storeLock.writeLock(); // 获取存储 写锁
+        this.logContainer = Paths.get(logContainer); // 构架日志存储目录
         this.bufferSize = bufferSize;
         this.logger = LogManager.getLogger(getClass());
         try{
             this.indexFile = new RandomAccessFile(this.logContainer.resolve(LOG_INDEX_FILE).toString(), "rw");
             this.dataFile = new RandomAccessFile(this.logContainer.resolve(LOG_STORE_FILE).toString(), "rw");
             this.startIndexFile = new RandomAccessFile(this.logContainer.resolve(LOG_START_INDEX_FILE).toString(), "rw");
-            if(this.startIndexFile.length() == 0){
+            if(this.startIndexFile.length() == 0){// 当前起始索引文件内容为0 则默认为1 并写入文件
                 this.startIndex = 1;
                 this.startIndexFile.writeLong(this.startIndex);
-            }else{
+            }else{// 否则读取 起始索引值
                 this.startIndex = this.startIndexFile.readLong();
             }
-
+            // 计算日志数 (indexFile 文件中  每一个存储的long值 表示一个日志文件大小， 除以 long值占的byte值 即可得已存储多少日志数  )
             this.entriesInStore = this.indexFile.length() / Long.BYTES;
-            this.buffer = new LogBuffer(this.entriesInStore > this.bufferSize ? (this.entriesInStore + this.startIndex - this.bufferSize) : this.startIndex, this.bufferSize);
+            // 当前日志存储大于 buffer大小，则起始位置为 ? TODO  不理解
+            this.buffer = new LogBuffer(this.entriesInStore > this.bufferSize ? (this.startIndex + (this.entriesInStore  - this.bufferSize)) : this.startIndex, this.bufferSize);
             this.fillBuffer();
-            this.logger.debug(String.format("log store started with entriesInStore=%d, startIndex=%d", this.entriesInStore, this.startIndex));
+            if(logger.isDebugEnabled()) {
+            	this.logger.debug(String.format("log store started with entriesInStore=%d, startIndex=%d", this.entriesInStore, this.startIndex));
+            }
         }catch(IOException exception){
             this.logger.error("failed to access log store", exception);
         }
@@ -572,7 +605,12 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             throw new RuntimeException(exception.getMessage(), exception);
         }
     }
-
+    
+    /**
+     * 从文件中当前位置起读满 buffer 
+     * @param stream 某位置处 文件访问对象
+     * @param buffer 需要被写满的buffer 未被写满则报错
+     */
     private void read(RandomAccessFile stream, byte[] buffer){
         try{
             int offset = 0;
@@ -581,7 +619,7 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 offset += bytesRead;
             }
 
-            if(offset < buffer.length){
+            if(offset < buffer.length){// 为读满buffer则报错
                 this.logger.error(String.format("only %d bytes are read while %d bytes are desired, bad file", offset, buffer.length));
                 throw new RuntimeException("bad file, insufficient file data for reading");
             }
@@ -590,10 +628,13 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             throw new RuntimeException(exception.getMessage(), exception);
         }
     }
-
+    /**
+     * 填充buffer
+     * @throws IOException
+     */
     private void fillBuffer() throws IOException{
-        long startIndex = this.buffer.firstIndex();
-        long indexFileSize = this.indexFile.length();
+        long startIndex = this.buffer.firstIndex();// 获取buffer的当前起始位置
+        long indexFileSize = this.indexFile.length();// 日志索引文件长度
         if(indexFileSize > 0){
             long indexPosition = (startIndex - this.startIndex) * Long.BYTES;
             this.indexFile.seek(indexPosition);

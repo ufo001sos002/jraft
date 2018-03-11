@@ -40,6 +40,11 @@ import net.data.technology.jraft.extensions.RpcTcpListener;
 
 public class App
 {
+	/**
+	 * 
+	 * @param args 0: type String 1: directory path 2:port
+	 * @throws Exception
+	 */
     public static void main( String[] args ) throws Exception
     {
         if(args.length < 2){

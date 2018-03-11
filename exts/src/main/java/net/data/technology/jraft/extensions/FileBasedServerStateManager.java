@@ -54,7 +54,11 @@ public class FileBasedServerStateManager implements ServerStateManager {
     private Logger logger;
     private Path container;
     private int serverId;
-
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedServerStateManager} 对象
+     * @param dataDirectory
+     */
     public FileBasedServerStateManager(String dataDirectory){
         this.logStore = new FileBasedSequentialLogStore(dataDirectory);
         this.container = Paths.get(dataDirectory);
