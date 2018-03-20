@@ -214,13 +214,13 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             this.indexFile.writeLong(dataFileLength); // 写入当前数据文件长度
             this.dataFile.seek(dataFileLength);// 设置 数据文件 当前写入位置 为文件长度(末尾)
             ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES + 1 + logEntry.getValue().length);
-            buffer.putLong(logEntry.getTerm());
-            buffer.put(logEntry.getValueType().toByte());
-            buffer.put(logEntry.getValue());
+            buffer.putLong(logEntry.getTerm());// 任期
+            buffer.put(logEntry.getValueType().toByte()); // 日志类型
+            buffer.put(logEntry.getValue()); //日志记录实际内容
             this.dataFile.write(buffer.array());// 将日志写入文件
-            this.entriesInStore += 1;
-            this.buffer.append(logEntry);
-            return this.entriesInStore + this.startIndex - 1;
+            this.entriesInStore += 1;// 日志数+1
+            this.buffer.append(logEntry);// 追加日志
+            return this.entriesInStore + this.startIndex - 1;// 日志所在索引
         }catch(IOException exception){
             this.logger.error("failed to append a log entry to store", exception);
             throw new RuntimeException(exception.getMessage(), exception);
@@ -852,8 +852,8 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
                 this.bufferWriteLock.lock();
                 this.buffer.add(entry);
                 if(this.maxSize < this.buffer.size()){
-                    this.buffer.remove(0);
-                    this.startIndex += 1;
+                    this.buffer.remove(0);// 移除顶部
+                    this.startIndex += 1; // 起始索引+1
                 }
             }finally{
                 this.bufferWriteLock.unlock();

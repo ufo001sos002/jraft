@@ -63,6 +63,10 @@ public class MessagePrinter implements StateMachine {
     private Path snapshotStore;
     private long commitIndex;
     private Map<String, String> messages = new ConcurrentHashMap<String, String>();
+    /**
+     * K：消息头 fmt addsrv rmsrv 等
+     * V：消息内容
+     */
     private Map<String, String> pendingMessages = new ConcurrentHashMap<String, String>();
     private boolean snapshotInprogress = false;
     private int port;
@@ -301,7 +305,7 @@ public class MessagePrinter implements StateMachine {
         String message = new String(data, StandardCharsets.UTF_8);
         System.out.println(String.format("PreCommit:%s at %d", message, logIndex));
         int index = message.indexOf(':');
-        if(index > 0){
+        if(index > 0){// TODO K值相同时，疑似 App类中 多条日志 会覆盖？
             this.pendingMessages.put(message.substring(0, index), message);
         }
     }
