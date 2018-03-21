@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 /**
  * Cluster server configuration 
  * a class to hold the configuration information for a server in a cluster
- * <br> 集群Server对象
+ * <br> 集群Server 配置对象
  * @author Data Technology LLC
  *
  */

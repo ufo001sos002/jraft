@@ -26,13 +26,21 @@ import java.util.function.Consumer;
 
 /**
  * Peer server in the same cluster for local server
- * this represents a peer for local server, it could be a leader, however, if local server is not a leader, though it has a list of peer servers, they are not used
+ * this represents a peer for local server, 
+ * it could be a leader, 
+ * however, if local server is not a leader, though it has a list of peer servers, they are not used
+ * <br>集群Server服务器对象
  * @author Data Technology LLC
  *
  */
 public class PeerServer {
-
+	/**
+	 * 集群Server 配置对象
+	 */
     private ClusterServer clusterConfig;
+    /**
+     * RPC客户端对象
+     */
     private RpcClient rpcClient;
     private int currentHeartbeatInterval;
     private int heartbeatInterval;
