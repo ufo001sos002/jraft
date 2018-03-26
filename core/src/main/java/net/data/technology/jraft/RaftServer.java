@@ -59,6 +59,11 @@ public class RaftServer implements RaftMessageHandler {
      * 选举任务返回结果
      */
     private ScheduledFuture<?> scheduledElection;
+    /**
+     * 集群Server集合
+     * K : Server Id
+     * V : 集群Server对象
+     */
     private Map<Integer, PeerServer> peers = new HashMap<Integer, PeerServer>();
     /**
      * 服务器角色
@@ -469,7 +474,10 @@ public class RaftServer implements RaftMessageHandler {
             }, this.context.getScheduledExecutor());
         }
     }
-
+    
+    /**
+     * 
+     */
     private void requestAppendEntries(){
         if(this.peers.size() == 0){
             this.commit(this.logStore.getFirstAvailableIndex() - 1);
@@ -1558,12 +1566,24 @@ public class RaftServer implements RaftMessageHandler {
 
         return lastSnapshot.getLastLogTerm();
     }
-
+    
+    /**
+     * Raft 消息发送者 实现类
+     */
     static class RaftMessageSenderImpl implements RaftMessageSender {
-
+    	/**
+    	 * 当前Raft 服务器(Raft消息处理类)
+    	 */
         private RaftServer server;
+        /**
+         * 与其他Raft服务器通信的客户端
+         */
         private Map<Integer, RpcClient> rpcClients;
-
+        /**
+         * 
+         * 根据参数构造 类{@link RaftMessageSenderImpl} 对象
+         * @param server 当前Raft 服务器(Raft消息处理类)
+         */
         RaftMessageSenderImpl(RaftServer server){
             this.server = server;
             this.rpcClients = new ConcurrentHashMap<Integer, RpcClient>();
@@ -1648,7 +1668,9 @@ public class RaftServer implements RaftMessageHandler {
             return result;
         }
     }
-
+    /**
+     * 数据记录 提交线程
+     */
     static class CommittingThread implements Runnable{
 
         private RaftServer server;

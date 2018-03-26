@@ -59,8 +59,13 @@ import net.data.technology.jraft.extensions.AsyncUtility;
  * 消息打印状态机
  */
 public class MessagePrinter implements StateMachine {
-
+	/**
+	 * 快照存储地址 对象
+	 */
     private Path snapshotStore;
+    /**
+     * 提交索引
+     */
     private long commitIndex;
     private Map<String, String> messages = new ConcurrentHashMap<String, String>();
     /**
@@ -69,7 +74,13 @@ public class MessagePrinter implements StateMachine {
      */
     private Map<String, String> pendingMessages = new ConcurrentHashMap<String, String>();
     private boolean snapshotInprogress = false;
+    /**
+     * 监听端口
+     */
     private int port;
+    /**
+     * 原生日志对象
+     */
     private org.apache.log4j.Logger logger;
     private AsynchronousServerSocketChannel listener;
     private ExecutorService executorService;

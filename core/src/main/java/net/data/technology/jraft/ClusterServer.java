@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
  */
 public class ClusterServer {
     /**
-     * 集群Sever ID
+     * 集群Sever ID(唯一)
      */
     private int id;
     /**

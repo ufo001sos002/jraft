@@ -22,7 +22,12 @@ package net.data.technology.jraft;
  *
  */
 public class RaftConsensus {
-
+	
+	/**
+	 * 根据 Raft上下文 对象 参数 运行
+	 * @param context Raft上下文 对象
+	 * @return Raft 消息发送者对象
+	 */
     public static RaftMessageSender run(RaftContext context){
         if(context == null){
             throw new IllegalArgumentException("context cannot be null");

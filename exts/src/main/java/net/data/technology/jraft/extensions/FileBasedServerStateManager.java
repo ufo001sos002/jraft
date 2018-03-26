@@ -48,19 +48,33 @@ public class FileBasedServerStateManager implements ServerStateManager {
     private static final String STATE_FILE = "server.state";
     private static final String CONFIG_FILE = "config.properties";
     private static final String CLUSTER_CONFIG_FILE = "cluster.json";
-
+    /**
+     * 服务器状态文件访问对象， 访问文件 {@link #STATE_FILE}
+     */
     private RandomAccessFile serverStateFile;
+    /**
+     * 基于文件的顺序数据记录存储对象
+     */
     private FileBasedSequentialLogStore logStore;
+    /**
+     * 原生日志对象
+     */
     private Logger logger;
+    /**
+     * 数据目录对象
+     */
     private Path container;
+    /**
+     * 服务端ID 从{@link #STATE_FILE} 获取 
+     */
     private int serverId;
     /**
      * 
      * 根据参数构造 类{@link FileBasedServerStateManager} 对象
-     * @param dataDirectory
+     * @param dataDirectory 文件目录
      */
     public FileBasedServerStateManager(String dataDirectory){
-        this.logStore = new FileBasedSequentialLogStore(dataDirectory);
+        this.logStore = new FileBasedSequentialLogStore(dataDirectory);// 构造数据记录 存储对象
         this.container = Paths.get(dataDirectory);
         this.logger = LogManager.getLogger(getClass());
         try{
@@ -156,6 +170,9 @@ public class FileBasedServerStateManager implements ServerStateManager {
         }
     }
 
+    /**
+     * 返回集群服务端 日志存储 对象 {@link #logStore}
+     */
     @Override
     public SequentialLogStore loadLogStore() {
         return this.logStore;

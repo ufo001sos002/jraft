@@ -32,7 +32,7 @@ public class RaftContext {
      */
     private RpcListener rpcListener;
     /**
-     * 日志工厂对象
+     * 本地非原生日志工厂对象
      */
     private LoggerFactory loggerFactory;
     /**
@@ -68,13 +68,13 @@ public class RaftContext {
     /**
      * 
      * 根据参数构造 类{@link RaftContext} 对象
-     * @param stateManager
-     * @param stateMachine
-     * @param raftParameters
-     * @param rpcListener
-     * @param logFactory
-     * @param rpcClientFactory
-     * @param scheduledExecutor
+     * @param stateManager  设置{@link #serverStateManager} 状态管理对象
+     * @param stateMachine  设置 {@link #stateMachine} 状态机对象
+     * @param raftParameters 设置 {@link #raftParameters} Raft参数对象
+     * @param rpcListener 设置{@link #rpcListener} 当前服务器端监听RPC对象 
+     * @param logFactory 设置{@link #loggerFactory} 本地非原生日志工厂对象
+     * @param rpcClientFactory 设置{@link #rpcClientFactory} RPC客户端工厂对象
+     * @param scheduledExecutor 设置{@link #scheduledExecutor}计划线程池 可为null ，则以 {@link Runtime#availableProcessors()} 为核心线程数
      */
     public RaftContext(ServerStateManager stateManager, StateMachine stateMachine, RaftParameters raftParameters, RpcListener rpcListener, LoggerFactory logFactory, RpcClientFactory rpcClientFactory, ScheduledThreadPoolExecutor scheduledExecutor){
         this.serverStateManager = stateManager;

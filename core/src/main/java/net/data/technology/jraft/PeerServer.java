@@ -58,7 +58,7 @@ public class PeerServer {
 
     public PeerServer(ClusterServer server, RaftContext context, final Consumer<PeerServer> heartbeatConsumer){
         this.clusterConfig = server;
-        this.rpcClient = context.getRpcClientFactory().createRpcClient(server.getEndpoint());
+        this.rpcClient = context.getRpcClientFactory().createRpcClient(server.getEndpoint());// 通过工厂创建rpc客户端
         this.busyFlag = new AtomicInteger(0);
         this.pendingCommitFlag = new AtomicInteger(0);
         this.heartbeatInterval = this.currentHeartbeatInterval = context.getRaftParameters().getHeartbeatInterval();
