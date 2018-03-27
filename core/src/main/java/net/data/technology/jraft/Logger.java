@@ -16,7 +16,9 @@
  */
 
 package net.data.technology.jraft;
-
+/**
+ * 自定义日志类接口类
+ */
 public interface Logger {
     /**
      * 自定义实现根据参数输出debug日志(必须保证不在该级别时不作输出,以免影响性能)

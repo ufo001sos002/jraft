@@ -101,9 +101,18 @@ public class RaftServer implements RaftMessageHandler {
      * 状态机对象
      */
     private StateMachine stateMachine;
+    /**
+     * 自定义日志类对象
+     */
     private Logger logger;
+    /**
+     * 随机数 对象
+     */
     private Random random;
     private Callable<Void> electionTimeoutTask;
+    /**
+     * 集群配置对象
+     */
     private ClusterConfiguration config;
     private long quickCommitIndex;
     private CommittingThread commitingThread;

@@ -114,7 +114,8 @@ public class FileBasedServerStateManager implements ServerStateManager {
             }
         }
     }
-
+    
+    @Override
     public void saveClusterConfiguration(ClusterConfiguration configuration){
         Gson gson = new GsonBuilder().create();
         String configData = gson.toJson(configuration);
