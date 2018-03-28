@@ -82,7 +82,9 @@ public class App
         if(args.length >= 3){
             port = Integer.parseInt(args[2]);
         }
+	// 构建当前集群Server 的 统一资源标识符 对象
         URI localEndpoint = new URI(config.getServer(stateManager.getServerId()).getEndpoint());
+	// 构建Raft 参数
         RaftParameters raftParameters = new RaftParameters()
                 .withElectionTimeoutUpper(5000)
                 .withElectionTimeoutLower(3000)
@@ -93,10 +95,11 @@ public class App
                 .withLogSyncStoppingGap(5)
                 .withSnapshotEnabled(5000)
                 .withSyncSnapshotBlockSize(0);
-        MessagePrinter mp = new MessagePrinter(baseDir, port);
+	// 构建状态机 对象
+	MessagePrinter stateMachine = new MessagePrinter(baseDir, port);
         RaftContext context = new RaftContext(
                 stateManager,
-                mp,
+		stateMachine,
                 raftParameters,
                 new RpcTcpListener(localEndpoint.getPort(), executor),
                 new Log4jLoggerFactory(),
@@ -105,7 +108,7 @@ public class App
         RaftConsensus.run(context);
         System.out.println( "Press Enter to exit." );
         System.in.read();
-        mp.stop();
+	stateMachine.stop();
     }
 
     private static void executeAsClient(ClusterConfiguration configuration, ExecutorService executor) throws Exception{

@@ -880,7 +880,7 @@ public class RaftServer implements RaftMessageHandler {
             lastLogIndex = peer.getNextLogIndex() - 1;
         }
 
-        if(lastLogIndex >= currentNextIndex){
+	if (lastLogIndex >= currentNextIndex) {
             this.logger.error("Peer's lastLogIndex is too large %d v.s. %d, server exits", lastLogIndex, currentNextIndex);
             this.stateMachine.exit(-1);
         }

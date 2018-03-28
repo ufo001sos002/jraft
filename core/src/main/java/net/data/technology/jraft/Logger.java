@@ -16,15 +16,18 @@
  */
 
 package net.data.technology.jraft;
+
 /**
- * 自定义日志类接口类
+ * 自定义日志类 接口类
  */
 public interface Logger {
     /**
      * 自定义实现根据参数输出debug日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
+     *            格式化参数
      * @param args
+     *            填入格式化内容 not null
      */
     public void debug(String format, Object... args);
 
@@ -32,31 +35,41 @@ public interface Logger {
      * 自定义实现根据参数输出info日志(必须保证不在该级别时不作输出,以免影响性能)
      * 
      * @param format
+     *            格式化参数
      * @param args
+     *            填入格式化内容 not null
      */
     public void info(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出warning日志(必须保证不在该级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出warning日志
      * 
      * @param format
+     *            格式化参数
      * @param args
+     *            填入格式化内容 not null
      */
     public void warning(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出error日志(必须保证不在该级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出error日志
      * 
      * @param format
+     *            格式化参数
      * @param args
+     *            填入格式化内容 not null
      */
     public void error(String format, Object... args);
 
     /**
-     * 自定义实现根据参数输出error日志(必须保证不在该级别时不作输出,以免影响性能)
+     * 自定义实现根据参数输出error日志
      * 
      * @param format
+     *            格式化参数
+     * @param error
+     *            错误堆栈对象
      * @param args
+     *            填入格式化内容 not null
      */
     public void error(String format, Throwable error, Object... args);
 }

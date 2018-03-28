@@ -23,8 +23,30 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Cluster configuration, a class to hold the cluster configuration information <br>
- * 集群配置对象
+ * Cluster configuration, a class to hold the cluster configuration information
+ * <br>
+ * 集群配置对象<br>
+ * 
+ * <pre>
+{
+    "logIndex": 1,
+    "lastLogIndex": 0,
+    "servers": [
+        {
+            "id": 1,
+            "endpoint": "tcp://localhost:9001"
+        },
+        {
+            "id": 2,
+            "endpoint": "tcp://localhost:9002"
+        },
+        {
+            "id": 3,
+            "endpoint": "tcp://localhost:9003"
+        }
+    ]
+}
+ * </pre>
  * 
  * @author Data Technology LLC
  *
@@ -124,9 +146,10 @@ public class ClusterConfiguration {
     /**
      * Try to get a cluster server configuration from cluster configuration
      * 
-     * @param id the server id
+     * @param id
+     *            the server id
      * @return a cluster server configuration or null if id is not found<br>
-     *         id未对应时返回null
+     *         返回id对应集群Server配置对象, id未对应时返回null
      */
     public ClusterServer getServer(int id){
         for(ClusterServer server : this.servers){

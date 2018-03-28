@@ -21,9 +21,19 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Cluster server configuration 
- * a class to hold the configuration information for a server in a cluster
- * <br> 集群Server 配置对象
+ * Cluster server configuration a class to hold the configuration information
+ * for a server in a cluster <br>
+ * 集群Server 配置对象
+ * 
+ * <pre>
+ * {
+
+    "id":3,
+    "endpoint":"tcp://localhost:9003"
+
+ * }
+ * </pre>
+ * 
  * @author Data Technology LLC
  *
  */
@@ -33,7 +43,7 @@ public class ClusterServer {
      */
     private int id;
     /**
-     * 集群Server 终端字符串
+     * 集群Server 终端字符串 格式：tcp://localhost:9003
      */
     private String endpoint;
 

@@ -56,7 +56,7 @@ import org.apache.log4j.LogManager;
 import net.data.technology.jraft.extensions.AsyncUtility;
 
 /**
- * 消息打印状态机
+ * 消息打印状态机 实现 {@link StateMachine} 接口
  */
 public class MessagePrinter implements StateMachine {
 	/**

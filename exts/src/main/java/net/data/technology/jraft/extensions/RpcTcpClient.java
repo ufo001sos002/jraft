@@ -37,11 +37,16 @@ import net.data.technology.jraft.RaftResponseMessage;
 import net.data.technology.jraft.RpcClient;
 
 /**
- * RPC TCP 客户端
+ * RPC TCP 客户端 实现类 实现 {@link RpcClient} 接口类
  */
 public class RpcTcpClient implements RpcClient {
-
+    /**
+     * 当前Socket通道对象
+     */
     private AsynchronousSocketChannel connection;
+    /**
+     * 通道组 用于创建通道
+     */
     private AsynchronousChannelGroup channelGroup;
     /**
      * 读任务队列

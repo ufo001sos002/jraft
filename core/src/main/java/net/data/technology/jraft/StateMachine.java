@@ -20,7 +20,8 @@ package net.data.technology.jraft;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 状态机
+ * 状态机接口类 <br>
+ * TODO 具体干啥的？ 木知
  */
 public interface StateMachine {
 

@@ -20,17 +20,18 @@ package net.data.technology.jraft;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * RPC客户端
+ * RPC客户端接口类
  */
 public interface RpcClient {
 
     /**
-     * Sends a RaftRequestMessage to peer and read a response from peer this will not be called
-     * concurrently <br>
-     * 发送Raft请求消息 并返回 Raft响应消息
+     * Sends a RaftRequestMessage to peer and read a response from peer this
+     * will not be called concurrently <br>
+     * 发送Raft请求消息 并返回 Raft响应 对象
      * 
-     * @param request Raft rpc request message
-     * @return Raft rpc response
+     * @param request
+     *            Raft rpc request message Raft请求消息对象
+     * @return Raft rpc response Raft请求响应对象
      */
     public CompletableFuture<RaftResponseMessage> send(RaftRequestMessage request);
 }

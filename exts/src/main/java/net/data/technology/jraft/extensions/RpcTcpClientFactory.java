@@ -28,9 +28,12 @@ import net.data.technology.jraft.RpcClient;
 import net.data.technology.jraft.RpcClientFactory;
 
 /**
- * RPC TCP 客户端工厂
+ * RPC TCP 客户端工厂 实现类 实现 {@link RpcClientFactory}接口类
  */
 public class RpcTcpClientFactory implements RpcClientFactory {
+    /**
+     * 线程池对象 所有RPC TCP客户端共用 用来建立socket连接
+     */
     private ExecutorService executorService;
 
     /**

@@ -20,15 +20,16 @@ package net.data.technology.jraft;
 import java.net.URI;
 
 /**
- * RPC客户端工厂
+ * RPC客户端工厂 接口类
  */
 public interface RpcClientFactory {
 
     /**
      * Creates a RpcClient for the given endpoint <br>
-     * 根据终端信息创建RPC客户端对象
+     * 根据终端信息(符合{@link URI}标准字符串)创建RPC客户端对象
      * 
-     * @param endpoint endpoint for the server 符合{@link URI}标准字符串
+     * @param endpoint
+     *            endpoint for the server 符合{@link URI}标准字符串
      * @return an instance of RpcClient
      */
     public RpcClient createRpcClient(String endpoint);

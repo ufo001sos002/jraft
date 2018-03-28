@@ -44,9 +44,17 @@ import net.data.technology.jraft.ServerStateManager;
  * 基于文件服务器状态管理
  */
 public class FileBasedServerStateManager implements ServerStateManager {
-
+    /**
+     * 状态文件名常量
+     */
     private static final String STATE_FILE = "server.state";
+    /**
+     * 配置文件名常量
+     */
     private static final String CONFIG_FILE = "config.properties";
+    /**
+     * 集群配置文件名常量
+     */
     private static final String CLUSTER_CONFIG_FILE = "cluster.json";
     /**
      * 服务器状态文件访问对象， 访问文件 {@link #STATE_FILE}
@@ -82,10 +90,11 @@ public class FileBasedServerStateManager implements ServerStateManager {
             FileInputStream configInput = new FileInputStream(this.container.resolve(CONFIG_FILE).toString());
             props.load(configInput);
             String serverIdValue = props.getProperty("server.id");
-            this.serverId = serverIdValue == null || serverIdValue.length() == 0 ? -1 : Integer.parseInt(serverIdValue.trim());
+	    this.serverId = serverIdValue == null || serverIdValue.length() == 0 ? -1
+		    : Integer.parseInt(serverIdValue.trim()); // 读取当前集群服务端程序ID
             configInput.close();
             this.serverStateFile = new RandomAccessFile(this.container.resolve(STATE_FILE).toString(), "rw");
-            this.serverStateFile.seek(0);
+	    this.serverStateFile.seek(0);// 打开并定位 服务器状态文件 写入位置
         }catch(IOException exception){
             this.logger.error("failed to create/open server state file", exception);
             throw new IllegalArgumentException("cannot create/open the state file", exception);

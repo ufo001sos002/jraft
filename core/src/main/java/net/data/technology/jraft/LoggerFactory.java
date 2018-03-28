@@ -16,14 +16,17 @@
  */
 
 package net.data.technology.jraft;
+
 /**
- * 日志工厂
+ * 自定义日志工厂 接口类
  */
 public interface LoggerFactory {
-	/**
-	 * 根据类返回 对应 日志对象
-	 * @param clazz
-	 * @return
-	 */
+    /**
+     * 根据类返回 对应 自定义日志对象
+     * 
+     * @param clazz
+     *            对象类 对象
+     * @return
+     */
     public Logger getLogger(Class<?> clazz);
 }

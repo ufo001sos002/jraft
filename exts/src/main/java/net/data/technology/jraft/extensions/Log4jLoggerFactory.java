@@ -22,8 +22,13 @@ import org.apache.log4j.LogManager;
 import net.data.technology.jraft.Logger;
 import net.data.technology.jraft.LoggerFactory;
 
+/**
+ * 自定义日志工厂类 实现 {@link LoggerFactory} 接口类
+ *
+ */
 public class Log4jLoggerFactory implements LoggerFactory {
 
+    @Override
     public Logger getLogger(Class<?> clazz) {
         return new Log4jLogger(LogManager.getLogger(clazz));
     }

@@ -40,13 +40,13 @@ import net.data.technology.jraft.RaftResponseMessage;
 import net.data.technology.jraft.RpcListener;
 
 /**
- * RPC TCP 监听服务
+ * RPC Server端 TCP 监听服务类 实现 {@link RpcListener} 接口类
  *
  */
 public class RpcTcpListener implements RpcListener {
-	/**
-	 * RPC TCP 监听端口
-	 */
+    /**
+     * RPC TCP 监听端口
+     */
     private int port;
     /**
      * 当前类 日志输出对象
