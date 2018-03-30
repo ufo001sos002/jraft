@@ -56,7 +56,7 @@ public interface ServerStateManager {
 
     /**
      * Load the log store for current server<br>
-     * 返回集群服务端 日志存储 对象
+     * 返回集群服务端 数据记录存储 对象
      * 
      * @return the log store, never be null(not null)
      */

@@ -127,7 +127,9 @@ public class RaftServer implements RaftMessageHandler {
     /**
      * 
      * 根据参数构造 类{@link RaftServer} 对象
+     * 
      * @param context
+     *            上下文对象
      */
     public RaftServer(RaftContext context){
         this.id = context.getServerStateManager().getServerId();

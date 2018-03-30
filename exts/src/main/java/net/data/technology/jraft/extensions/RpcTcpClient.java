@@ -56,9 +56,21 @@ public class RpcTcpClient implements RpcClient {
      * 写任务队列
      */
     private ConcurrentLinkedQueue<AsyncTask<RaftRequestMessage>> writeTasks;
+    /**
+     * 当前待读任务计数
+     */
     private AtomicInteger readers;
+    /**
+     * 当前待发送任务数
+     */
     private AtomicInteger writers;
+    /**
+     * 需要进行RPC TCP 通讯的地址
+     */
     private InetSocketAddress remote;
+    /**
+     * 原生日志对象
+     */
     private Logger logger;
 
     /**
@@ -68,7 +80,9 @@ public class RpcTcpClient implements RpcClient {
      * </p>
      * 
      * @param remote
+     *            需要进行RPC TCP 通讯的地址
      * @param executorService
+     *            构建AIO连接的连接池
      */
     public RpcTcpClient(InetSocketAddress remote, ExecutorService executorService){
         this.remote = remote;
@@ -148,10 +162,14 @@ public class RpcTcpClient implements RpcClient {
             closeSocket();
         }
     }
+    
     /**
      * 读取回包数据
-     * @param task 异步任务队列
-     * @param skipQueueing 是否跳过队列直接进行操作  true 跳过
+     * 
+     * @param task
+     *            异步任务对象
+     * @param skipQueueing
+     *            是否跳过队列直接进行操作 true 跳过
      */
     private void readResponse(AsyncTask<ByteBuffer> task, boolean skipQueueing){
         if(!skipQueueing){

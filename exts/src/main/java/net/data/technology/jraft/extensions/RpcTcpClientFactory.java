@@ -42,6 +42,7 @@ public class RpcTcpClientFactory implements RpcClientFactory {
      * </p>
      * 
      * @param executorService
+     *            线程池对象 所有RPC TCP客户端共用 用来建立socket连接
      */
     public RpcTcpClientFactory(ExecutorService executorService){
         this.executorService = executorService;
