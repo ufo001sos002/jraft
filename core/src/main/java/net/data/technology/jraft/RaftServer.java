@@ -109,6 +109,9 @@ public class RaftServer implements RaftMessageHandler {
      * 随机数 对象
      */
     private Random random;
+    /**
+     * 选举超时回调 对象
+     */
     private Callable<Void> electionTimeoutTask;
     /**
      * 集群配置对象
@@ -119,9 +122,15 @@ public class RaftServer implements RaftMessageHandler {
 
     // fields for extended messages
     private PeerServer serverToJoin = null;
+    /**
+     * 配置变更 true 为是
+     */
     private boolean configChanging = false;
     private boolean catchingUp = false;
     private int steppingDown = 0;
+    /**
+     * TODO 注释?
+     */
     private AtomicInteger snapshotInProgress;
     // end fields for extended messages
     /**
@@ -154,7 +163,7 @@ public class RaftServer implements RaftMessageHandler {
             }};
 
 
-        if(this.state == null){
+	if (this.state == null) { // 如果未初始化
             this.state = new ServerState();
             this.state.setTerm(0);
             this.state.setVotedFor(-1);
@@ -162,24 +171,27 @@ public class RaftServer implements RaftMessageHandler {
         }
 
         /**
-         * I found this implementation is also a victim of bug https://groups.google.com/forum/#!topic/raft-dev/t4xj6dJTP6E
-         * As the implementation is based on Diego's thesis
-         * Fix:
-         * We should never load configurations that is not committed, 
-         *   this prevents an old server from replicating an obsoleted config to other servers
-         * The prove is as below:
-         * Assume S0 is the last committed server set for the old server A
-         * |- EXITS Log l which has been committed but l !BELONGS TO A.logs =>  Vote(A) < Majority(S0)
-         * In other words, we need to prove that A cannot be elected to leader if any logs/configs has been committed.
-         * Case #1, There is no configuration change since S0, then it's obvious that Vote(A) < Majority(S0), see the core Algorithm
-         * Case #2, There are one or more configuration changes since S0, then at the time of first configuration change was committed, 
-         *      there are at least Majority(S0 - 1) servers committed the configuration change
-         *      Majority(S0 - 1) + Majority(S0) > S0 => Vote(A) < Majority(S0)
-         * -|
-         */
+	 * <pre>
+	 *  TODO 不理解?
+	 * I found this implementation is also a victim of bug https://groups.google.com/forum/#!topic/raft-dev/t4xj6dJTP6E
+	 * As the implementation is based on Diego's thesis
+	 * Fix:
+	 * We should never load configurations that is not committed,this prevents an old server from replicating an obsoleted config to other servers
+	 * The prove is as below:
+	 * Assume S0 is the last committed server set for the old server A
+	 * |- EXITS Log l which has been committed but l !BELONGS TO A.logs =>  Vote(A) < Majority(S0)
+	 * In other words, we need to prove that A cannot be elected to leader if any logs/configs has been committed.
+	 * Case #1, There is no configuration change since S0, then it's obvious that Vote(A) < Majority(S0), see the core Algorithm
+	 * Case #2, There are one or more configuration changes since S0, then at the time of first configuration change was committed, 
+	 *      there are at least Majority(S0 - 1) servers committed the configuration change
+	 *      Majority(S0 - 1) + Majority(S0) > S0 => Vote(A) < Majority(S0)
+	 * -|
+	 * </pre>
+	 */
 
         //try to see if there is an uncommitted configuration change, since we cannot allow two configuration changes at a time
-        for(long i = Math.max(this.state.getCommitIndex() + 1, this.logStore.getStartIndex()); i < this.logStore.getFirstAvailableIndex(); ++i){
+	for (long i = Math.max(this.state.getCommitIndex() + 1, this.logStore.getStartIndex()); i < this.logStore
+		.getFirstAvailableIndex(); ++i) { // 检测尚未在索引处提交的配置更改
             LogEntry logEntry = this.logStore.getLogEntryAt(i);
             if(logEntry.getValueType() == LogValueType.Configuration){
                 this.logger.info("detect a configuration change that is not committed yet at index %d", i);

@@ -18,7 +18,8 @@
 package net.data.technology.jraft;
 
 /**
- * 集群服务端 状态
+ * 集群服务端 状态 <br>
+ * 包含 {@link #term} {@link #commitIndex} {@link #votedFor}
  */
 public class ServerState {
     /**

@@ -36,7 +36,8 @@ public class RaftParameters {
      */
     private int heartbeatInterval;
     /**
-     * Rpc failure backoff in milliseconds
+     * Rpc failure backoff in milliseconds <br>
+     * RPC 失败回退 时间(毫秒)
      */
     private int rpcFailureBackoff;
     private int logSyncBatchSize;
@@ -184,9 +185,15 @@ public class RaftParameters {
     }
 
     /**
-     * The maximum heartbeat interval, any value beyond this may lead to election timeout for a peer before receiving a heartbeat
-     *  <br>返回max({@link #rpcFailureBackoff}, ({@link #electionTimeoutLowerBound} - {@link #heartbeatInterval} / 2))值
-     * @return maximum heartbeat interval (including rpc backoff) in milliseconds
+     * The maximum heartbeat interval, any value beyond this may lead to election
+     * timeout for a peer before receiving a heartbeat
+     * 最大心跳间隔，在接收心跳之前，任何超出此值的值都可能导致选举超时 <br>
+     * 返回max({@link #heartbeatInterval}, ({@link #electionTimeoutLowerBound} -
+     * {@link #heartbeatInterval} / 2))值
+     * 
+     * @return maximum heartbeat interval (including rpc backoff) in
+     *         milliseconds<br>
+     *         最大心跳间隔 包括(rpc 失败 回退)(毫秒)
      */
     public int getMaxHeartbeatInterval(){
         return Math.max(this.heartbeatInterval, this.electionTimeoutLowerBound - this.heartbeatInterval / 2);

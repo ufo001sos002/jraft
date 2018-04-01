@@ -42,21 +42,68 @@ public class PeerServer {
      * RPC客户端对象
      */
     private RpcClient rpcClient;
+    /**
+     * 当前心跳间隔 (毫秒)
+     */
     private int currentHeartbeatInterval;
+    /**
+     * 心跳间隔 (毫秒)
+     */
     private int heartbeatInterval;
+    /**
+     * RPC失败回退间隔 (毫秒)
+     */
     private int rpcBackoffInterval;
+    /**
+     * 最大心跳间隔 (毫秒) TODO {@link RaftParameters#getMaxHeartbeatInterval()} 中计算方式如何得来?
+     */
     private int maxHeartbeatInterval;
+    /**
+     * 繁忙标志 1 为繁忙 0为空闲(默认值)
+     */
     private AtomicInteger busyFlag;
+    /**
+     * 待提交标志 1为 待提交中 0为未待提交中(默认值)
+     */
     private AtomicInteger pendingCommitFlag;
+    /**
+     * 心跳超时处理回调
+     */
     private Callable<Void> heartbeatTimeoutHandler;
+    /**
+     * 心跳任务(默认null)
+     */
     private ScheduledFuture<?> heartbeatTask;
+    /**
+     * 下次数据记录 索引位置(默认1)
+     */
     private long nextLogIndex;
+    /**
+     * 当前匹配的 数据记录索引位置(默认0)
+     */
     private long matchedIndex;
+    /**
+     * 心跳启动(true 开启) 默认未开启
+     */
     private boolean heartbeatEnabled;
     private SnapshotSyncContext snapshotSyncContext;
+    /**
+     * 上下文共享计划线程池对象 {@link RaftContext#getScheduledExecutor()}
+     */
     private Executor executor;
 
-    public PeerServer(ClusterServer server, RaftContext context, final Consumer<PeerServer> heartbeatConsumer){
+    /**
+     * 
+     * 根据参数构造 类{@link PeerServer} 对象
+     * 
+     * @param server
+     *            集群服务器 配置对象
+     * @param context
+     *            集群上下文对象
+     * @param heartbeatTimeOutConsumer
+     *            心跳超时消费对象
+     */
+    public PeerServer(ClusterServer server, RaftContext context, final Consumer<PeerServer> heartbeatTimeOutConsumer) {
         this.clusterConfig = server;
         this.rpcClient = context.getRpcClientFactory().createRpcClient(server.getEndpoint());// 通过工厂创建rpc客户端
         this.busyFlag = new AtomicInteger(0);
@@ -75,23 +122,38 @@ public class PeerServer {
 
             @Override
             public Void call() throws Exception {
-                heartbeatConsumer.accept(self);
+		heartbeatTimeOutConsumer.accept(self);
                 return null;
             }};
     }
 
+    /**
+     * 
+     * @return 返回 {@link ClusterServer#getId()} 的值
+     */
     public int getId(){
         return this.clusterConfig.getId();
     }
 
+    /**
+     * @return 返回 {@link #clusterConfig}
+     */
     public ClusterServer getClusterConfig(){
         return this.clusterConfig;
     }
 
+    /**
+     * @return 返回 {@link #heartbeatTimeoutHandler}
+     */
     public Callable<Void> getHeartbeartHandler(){
         return this.heartbeatTimeoutHandler;
     }
 
+    /**
+     * (类对象级别) 线程同步
+     * 
+     * @return 返回 {@link #currentHeartbeatInterval}
+     */
     public synchronized int getCurrentHeartbeatInterval(){
         return this.currentHeartbeatInterval;
     }
@@ -104,18 +166,34 @@ public class PeerServer {
         return this.heartbeatTask;
     }
 
+    /**
+     * 线程同步 设置当前繁忙 设置 {@link #busyFlag} 为1
+     */
     public boolean makeBusy(){
         return this.busyFlag.compareAndSet(0, 1);
     }
 
+    /**
+     * 设置当前空闲 设置 {@link #busyFlag} 为0
+     */
     public void setFree(){
         this.busyFlag.set(0);
     }
 
+    /**
+     * 是否开启心跳
+     * 
+     * @return true 开启 ,false未开启
+     */
     public boolean isHeartbeatEnabled(){
         return this.heartbeatEnabled;
     }
 
+    /**
+     * 开启 / 关闭心跳 (关闭时 置 {@link #heartbeatTask} 为null)
+     * 
+     * @param enable
+     */
     public void enableHeartbeat(boolean enable){
         this.heartbeatEnabled = enable;
 
@@ -140,10 +218,16 @@ public class PeerServer {
         this.matchedIndex = matchedIndex;
     }
 
+    /**
+     * 设置待提交中状态 设置 {@link #pendingCommitFlag} 为1
+     */
     public void setPendingCommit(){
         this.pendingCommitFlag.set(1);
     }
 
+    /**
+     * 线程同步 清除 待提交中状态 设置 {@link #pendingCommitFlag} 为0
+     */
     public boolean clearPendingCommit(){
         return this.pendingCommitFlag.compareAndSet(1, 0);
     }
