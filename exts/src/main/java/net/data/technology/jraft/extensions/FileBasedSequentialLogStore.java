@@ -98,7 +98,7 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
     private RandomAccessFile indexFile;
     /**
      * 文件对象 文件名： {@link #LOG_START_INDEX_FILE} <br>
-     * 存储数据：数据记录 当前开始索引 {@link #indexFile}文件的写入位置
+     * 存储数据：数据记录 <b>当前开始</b> 索引 值
      */
     private RandomAccessFile startIndexFile;
     /**
@@ -106,7 +106,7 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
      */
     private long entriesInStore;
     /**
-     * 数据记录开始索引位置
+     * 数据记录 <b>当前开始</b>索引 值
      */
     private long startIndex;
     /**

@@ -17,6 +17,9 @@
 
 package net.data.technology.jraft;
 
+/**
+ * 快照类
+ */
 public class Snapshot {
 
     private long lastLogIndex;

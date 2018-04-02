@@ -362,8 +362,15 @@ public class RaftServer implements RaftMessageHandler {
         return response;
     }
 
+    /**
+     * 处理 {@link RaftMessageType#RequestVoteRequest} 请求消息
+     * 
+     * @param request
+     * @return
+     */
     private synchronized RaftResponseMessage handleVoteRequest(RaftRequestMessage request){
         // we allow the server to be continue after term updated to save a round message
+	// 我们允许服务器在更新期限后继续保存回合消息
         this.updateTerm(request.getTerm());
 
         // Reset stepping down value to prevent this server goes down when leader crashes after sending a LeaveClusterRequest

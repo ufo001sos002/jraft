@@ -266,6 +266,12 @@ public class PeerServer {
         return this.snapshotSyncContext;
     }
 
+    /**
+     * 向集群其他服务端 发送Raft消息
+     * 
+     * @param request
+     * @return
+     */
     public CompletableFuture<RaftResponseMessage> SendRequest(RaftRequestMessage request){
         boolean isAppendRequest = request.getMessageType() == RaftMessageType.AppendEntriesRequest || request.getMessageType() == RaftMessageType.InstallSnapshotRequest;
         return this.rpcClient.send(request)
