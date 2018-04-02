@@ -40,9 +40,10 @@ public interface ServerStateManager {
 
     /**
      * Save the server state<br>
-     * 保存本集群服务端 状态
+     * 持久化本集群服务端 状态
      * 
-     * @param serverState server state to persist
+     * @param serverState
+     *            server state to persist 将被持久化的服务器状态
      */
     public void persistState(ServerState serverState);
 

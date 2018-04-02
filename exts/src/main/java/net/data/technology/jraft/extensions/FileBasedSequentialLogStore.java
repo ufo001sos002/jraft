@@ -84,21 +84,21 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
      */
     private Logger logger;
     /**
-     * 文件对象
-     * 文件名： {@link #LOG_INDEX_FILE}
-     * 存储数据：每条 数据记录 对应 之前 {@link #dataFile}文件长度
-     */
-    private RandomAccessFile indexFile;
-    /**
-     * 文件对象
-     * 文件名： {@link #LOG_STORE_FILE} 
-     * 存储数据：每条数据记录 的数据内容
+     * 文件对象 文件名： {@link #LOG_STORE_FILE} <br>
+     * 存储数据：每条 数据记录 的数据内容 .<br>
+     * 由{@link #indexFile}对应每条日志的长度
      */
     private RandomAccessFile dataFile;
     /**
-     * 文件对象
-     * 文件名： {@link #LOG_START_INDEX_FILE} 
-     * 存储数据：数据记录开始索引 记录文件
+     * 文件对象 文件名： {@link #LOG_INDEX_FILE} <br>
+     * 存储数据：{@link #dataFile}中每条 数据记录 长度:<br>
+     * 每{@link Long#BYTES} 长度对应一条数据记录 长度, <br>
+     * 文件长度 {@link RandomAccessFile#length()} / {@link Long#BYTES} 为 数据记录 数,<br>
+     */
+    private RandomAccessFile indexFile;
+    /**
+     * 文件对象 文件名： {@link #LOG_START_INDEX_FILE} <br>
+     * 存储数据：数据记录 当前开始索引 {@link #indexFile}文件的写入位置
      */
     private RandomAccessFile startIndexFile;
     /**
@@ -168,7 +168,7 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
             }
             // 计算数据记录数 (indexFile 文件中  每一个存储的long值 表示一个日志文件大小， 除以 long值占的byte值 即可得已存储多少数据记录数  )
             this.entriesInStore = this.indexFile.length() / Long.BYTES;
-            // 当前数据记录存储大于 buffer大小，则起始位置为 ? TODO  不理解
+	    // 当前数据记录存储大于 buffer大小，则起始位置为 ? TODO ?不理解
             this.buffer = new LogBuffer(this.entriesInStore > this.bufferSize ? (this.startIndex + (this.entriesInStore  - this.bufferSize)) : this.startIndex, this.bufferSize);
             this.fillBuffer();
             if(logger.isDebugEnabled()) {
@@ -183,7 +183,7 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
     public long getFirstAvailableIndex() {
         try{
             this.storeReadLock.lock();
-            return this.entriesInStore + this.startIndex;
+	    return this.entriesInStore + this.startIndex; // TODO ?不理解
         }finally{
             this.storeReadLock.unlock();
         }

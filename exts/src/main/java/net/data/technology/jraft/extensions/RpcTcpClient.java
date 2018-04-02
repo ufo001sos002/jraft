@@ -101,7 +101,10 @@ public class RpcTcpClient implements RpcClient {
 
     @Override
     public synchronized CompletableFuture<RaftResponseMessage> send(final RaftRequestMessage request) {
-        this.logger.debug(String.format("trying to send message %s to server %d at endpoint %s", request.getMessageType().toString(), request.getDestination(), this.remote.toString()));
+	if (logger.isDebugEnabled()) {
+	    logger.debug(String.format("trying to send message %s to server %d at endpoint %s",
+		    request.getMessageType().toString(), request.getDestination(), this.remote.toString()));
+	}
         CompletableFuture<RaftResponseMessage> result = new CompletableFuture<RaftResponseMessage>();
         if (this.connection == null || !this.connection.isOpen()) { // 没有连接 则 先创建 后 进行 发送读操作
             try{
@@ -129,7 +132,9 @@ public class RpcTcpClient implements RpcClient {
         if(!skipQueueing){
             int writerCount = this.writers.getAndIncrement();
             if(writerCount > 0){ // 加入队列
-                this.logger.debug("there is a pending write, queue this write task");
+		if (logger.isDebugEnabled()) {
+		    logger.debug("there is a pending write, queue this write task");
+		}
                 this.writeTasks.add(task);
                 return;
             }
@@ -139,7 +144,9 @@ public class RpcTcpClient implements RpcClient {
         try{
             AsyncUtility.writeToChannel(this.connection, buffer, task, handlerFrom((Integer bytesSent, AsyncTask<RaftRequestMessage> context) -> {
                 if(bytesSent.intValue() < buffer.limit()){
-                    logger.info("failed to sent the request to remote server.");
+			    if (logger.isInfoEnabled()) {
+				logger.info("failed to sent the request to remote server.");
+			    }
                     context.future.completeExceptionally(new IOException("Only partial of the data could be sent"));
                     closeSocket();
                 }else{
@@ -150,14 +157,18 @@ public class RpcTcpClient implements RpcClient {
 
                 int waitingWriters = this.writers.decrementAndGet();
                 if(waitingWriters > 0){ // 队列发送
-                    this.logger.debug("there are pending writers in queue, will try to process them");
+			    if (logger.isDebugEnabled()) {
+				logger.debug("there are pending writers in queue, will try to process them");
+			    }
                     AsyncTask<RaftRequestMessage> pendingTask = null;
                     while((pendingTask = this.writeTasks.poll()) == null);
                     this.sendAndRead(pendingTask, true);
                 }
             }));
         }catch(Exception writeError){
-            logger.info("failed to write the socket", writeError);
+	    if (logger.isInfoEnabled()) {
+		logger.info("failed to write the socket", writeError);
+	    }
             task.future.completeExceptionally(writeError);
             closeSocket();
         }
@@ -256,10 +267,33 @@ public class RpcTcpClient implements RpcClient {
         this.writers.set(0);
     }
 
+    /**
+     * 异步任务 类
+     * 
+     * @param <TInput>
+     *            入参类
+     */
     static class AsyncTask<TInput>{
+	/**
+	 * 入参类对象
+	 */
         private TInput input;
+	/**
+	 * 异步任务结果对象
+	 */
         private CompletableFuture<RaftResponseMessage> future;
 
+	/**
+	 * 
+	 * <p>
+	 * Description: 构造 {@link AsyncTask}
+	 * </p>
+	 * 
+	 * @param input
+	 *            入参对象
+	 * @param future
+	 *            异步任务结果对象
+	 */
         public AsyncTask(TInput input, CompletableFuture<RaftResponseMessage> future){
             this.input = input;
             this.future = future;

@@ -56,17 +56,17 @@ public class RaftServer implements RaftMessageHandler {
      */
     private RaftContext context;
     /**
-     * 选举任务返回结果
+     * 选举任务 结果 对象
      */
     private ScheduledFuture<?> scheduledElection;
     /**
-     * 集群Server集合
-     * K : Server Id
+     * 集群Server集合(不包含当前服务端)<br>
+     * K : Server Id <br>
      * V : 集群Server对象
      */
     private Map<Integer, PeerServer> peers = new HashMap<Integer, PeerServer>();
     /**
-     * 服务器角色
+     * 服务器角色 (默认 {@link ServerRole#Follower})
      */
     private ServerRole role;
     /**
@@ -90,7 +90,7 @@ public class RaftServer implements RaftMessageHandler {
      */
     private int votesGranted;
     /**
-     * 选举是否完成 true 完成
+     * 选举是否完成 true 完成 (默认false)
      */
     private boolean electionCompleted;
     /**
@@ -117,19 +117,28 @@ public class RaftServer implements RaftMessageHandler {
      * 集群配置对象
      */
     private ClusterConfiguration config;
+    /**
+     * 快速提交索引 默认由 {@link ServerState#getCommitIndex()}初始
+     */
     private long quickCommitIndex;
     private CommittingThread commitingThread;
 
     // fields for extended messages
     private PeerServer serverToJoin = null;
     /**
-     * 配置变更 true 为是
+     * 配置变更 true 为是(默认false)
      */
     private boolean configChanging = false;
+    /**
+     * TODO ?不理解 追加数据记录 true为是 (默认false)
+     */
     private boolean catchingUp = false;
+    /**
+     * TODO ?不理解 初始值0
+     */
     private int steppingDown = 0;
     /**
-     * TODO 注释?
+     * TODO ?不理解 注释?
      */
     private AtomicInteger snapshotInProgress;
     // end fields for extended messages
@@ -172,7 +181,7 @@ public class RaftServer implements RaftMessageHandler {
 
         /**
 	 * <pre>
-	 *  TODO 不理解?
+	 *  TODO ?不理解
 	 * I found this implementation is also a victim of bug https://groups.google.com/forum/#!topic/raft-dev/t4xj6dJTP6E
 	 * As the implementation is based on Diego's thesis
 	 * Fix:
@@ -210,12 +219,13 @@ public class RaftServer implements RaftMessageHandler {
         this.commitingThread = new CommittingThread(this);
         this.role = ServerRole.Follower;
         new Thread(this.commitingThread).start();
-        this.restartElectionTimer();
+	this.restartElectionTimer(); // TODO ? 不理解
         this.logger.info("Server %d started", this.id);
     }
     
     /**
-     * 返回具体Raft消息发送者对象
+     * 返回本Raft服务端 的 Raft消息发送者 对象
+     * 
      * @return {@link RaftMessageSender} 实现类对象
      */
     public RaftMessageSender createMessageSender(){
@@ -418,7 +428,7 @@ public class RaftServer implements RaftMessageHandler {
     }
     
     /**
-     * 处理选举超时
+     * 选举
      */
     private synchronized void handleElectionTimeout(){
         if(this.steppingDown > 0){
@@ -441,8 +451,9 @@ public class RaftServer implements RaftMessageHandler {
 
         if(this.catchingUp){
             // this is a new server for the cluster, will not send out vote request until the config that includes this server is committed
-            this.logger.info("election timeout while joining the cluster, ignore it.");
-            this.restartElectionTimer();
+	    // 这是群集的新服务器，直到包含此服务器的配置提交后才会发送投票请求
+	    logger.info("election timeout while joining the cluster, ignore it.");
+	    restartElectionTimer();
             return;
         }
 
@@ -468,6 +479,9 @@ public class RaftServer implements RaftMessageHandler {
         }
     }
 
+    /**
+     * 发送投票请求
+     */
     private void requestVote(){
         // vote for self
         this.logger.info("requestVote started with term %d", this.state.getTerm());
@@ -476,8 +490,8 @@ public class RaftServer implements RaftMessageHandler {
         this.votesGranted += 1;
         this.votesResponded += 1;
 
-        // this is the only server?
-        if(this.votesGranted > (this.peers.size() + 1) / 2){
+	// this is the only server? TODO ?是否有问题? 按理 独立一台 不影响
+        if (this.votesGranted > (this.peers.size() + 1) / 2) { // 同意数 必须大于 集群数/2(一半)
             this.electionCompleted = true;
             this.becomeLeader();
             return;
@@ -694,17 +708,22 @@ public class RaftServer implements RaftMessageHandler {
         }
     }
 
+    /**
+     * 重启选举任务
+     */
     private void restartElectionTimer(){
         // don't start the election timer while this server is still catching up the logs
+	// 不要在此服务器仍在 追加数据记录 时启动选举计时器
         if(this.catchingUp){
             return;
         }
 
-        if(this.scheduledElection != null){
+	if (this.scheduledElection != null) { // 当选举任务未开始则停止，否则开始未结束，则等待任务结束
             this.scheduledElection.cancel(false);
         }
 
         RaftParameters parameters = this.context.getRaftParameters();
+	// 选举延迟时间
         int electionTimeout = parameters.getElectionTimeoutLowerBound() + this.random.nextInt(parameters.getElectionTimeoutUpperBound() - parameters.getElectionTimeoutLowerBound() + 1);
         this.scheduledElection = this.context.getScheduledExecutor().schedule(this.electionTimeoutTask, electionTimeout, TimeUnit.MILLISECONDS);
     }
@@ -719,6 +738,9 @@ public class RaftServer implements RaftMessageHandler {
         this.scheduledElection = null;
     }
 
+    /**
+     * 成为leader({@link ServerRole#Leader})
+     */
     private void becomeLeader(){
         this.stopElectionTimer();
         this.role = ServerRole.Leader;
@@ -748,6 +770,9 @@ public class RaftServer implements RaftMessageHandler {
         peer.setHeartbeatTask(this.context.getScheduledExecutor().schedule(peer.getHeartbeartHandler(), peer.getCurrentHeartbeatInterval(), TimeUnit.MILLISECONDS));
     }
 
+    /**
+     * 变为跟随者({@link ServerRole#Follower})
+     */
     private void becomeFollower(){
         // stop heartbeat for all peers
         for(PeerServer server : this.peers.values()){
@@ -1573,6 +1598,13 @@ public class RaftServer implements RaftMessageHandler {
         }
     }
 
+    /**
+     * 根据数据记录 索引 位置 获取 对应任期
+     * 
+     * @param logIndex
+     *            数据记录索引位置
+     * @return
+     */
     private long termForLastLog(long logIndex){
         if(logIndex == 0){
             return 0;
@@ -1591,7 +1623,7 @@ public class RaftServer implements RaftMessageHandler {
     }
     
     /**
-     * Raft 消息发送者 实现类
+     * Raft 消息发送者 实现类 {@link RaftMessageSender}
      */
     static class RaftMessageSenderImpl implements RaftMessageSender {
     	/**
@@ -1691,19 +1723,37 @@ public class RaftServer implements RaftMessageHandler {
             return result;
         }
     }
+    
     /**
-     * 数据记录 提交线程
+     * 数据记录 提交 (实现 {@link Runnable} 接口)
      */
     static class CommittingThread implements Runnable{
-
+	/**
+	 * 本机Raft 服务器对象
+	 */
         private RaftServer server;
+	/**
+	 * 条件锁 对象
+	 */
         private Object conditionalLock;
 
+	/**
+	 * 
+	 * <p>
+	 * Description: 根据当前集群服务对象构建 提交线程
+	 * </p>
+	 * 
+	 * @param server
+	 *            当前集群服务对象
+	 */
         CommittingThread(RaftServer server){
             this.server = server;
             this.conditionalLock = new Object();
         }
 
+	/**
+	 * 唤醒线程有需要提交
+	 */
         void moreToCommit(){
             synchronized(this.conditionalLock){
                 this.conditionalLock.notify();
@@ -1711,7 +1761,7 @@ public class RaftServer implements RaftMessageHandler {
         }
 
         @Override
-        public void run() {
+	public void run() {// TODO ?不理解 提交相关?
             while(true){
                 try{
                     long currentCommitIndex = server.state.getCommitIndex();

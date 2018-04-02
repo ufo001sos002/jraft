@@ -20,7 +20,7 @@ package net.data.technology.jraft;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Raft 消息发送者
+ * 当前 Raft 服务端 消息发送者 接口
  */
 public interface RaftMessageSender {
 

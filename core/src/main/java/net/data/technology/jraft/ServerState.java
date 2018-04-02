@@ -31,58 +31,63 @@ public class ServerState {
      */
     private long commitIndex;
     /**
-     * 投票
+     * 投票 给谁 (当为 {@link ServerRole#Candidate} 时 为-1) ，后续发起
+     * {@link RaftServer#requestVote()} 时置为 {@link RaftServer#id}
      */
     private int votedFor;
 
     /**
-	 * @return 返回 {@link #term}值
-	 */
-	public long getTerm() {
-		return term;
-	}
-
-	/**
-	 * @param 用参数term设置 {@link #term}
-	 */
-	public void setTerm(long term) {
-		this.term = term;
-	}
-
-	/**
-	 * @return 返回 {@link #votedFor}值
-	 */
-	public int getVotedFor() {
-		return votedFor;
-	}
-
-	/**
-	 * @param 用参数votedFor设置 {@link #votedFor}
-	 */
-	public void setVotedFor(int votedFor) {
-		this.votedFor = votedFor;
-	}
-
-	/**
-	 * @return 返回 {@link #commitIndex}值
-	 */
-	public long getCommitIndex() {
-		return commitIndex;
-	}
-	/**
-	 * 当前{@link #term} +1
-	 */
-	public void increaseTerm(){
-        this.term += 1;
+     * @return 返回 {@link #term}值
+     */
+    public long getTerm() {
+	return term;
     }
-	
-	/**
-	 * @param 用参数commitIndex设置 {@link #commitIndex} 大于才会生效
-	 */
+
+    /**
+     * @param 用参数term设置
+     *            {@link #term}
+     */
+    public void setTerm(long term) {
+	this.term = term;
+    }
+
+    /**
+     * @return 返回 {@link #votedFor}值
+     */
+    public int getVotedFor() {
+	return votedFor;
+    }
+
+    /**
+     * @param 用参数votedFor设置
+     *            {@link #votedFor}
+     */
+    public void setVotedFor(int votedFor) {
+	this.votedFor = votedFor;
+    }
+
+    /**
+     * @return 返回 {@link #commitIndex}值
+     */
+    public long getCommitIndex() {
+	return commitIndex;
+    }
+
+    /**
+     * 当前{@link #term} +1
+     */
+    public void increaseTerm() {
+	this.term += 1;
+    }
+
+    /**
+     * @param 用参数commitIndex设置
+     *            {@link #commitIndex} 大于才会生效
+     */
     public void setCommitIndex(long commitIndex) {
-        if(commitIndex > this.commitIndex){
-            this.commitIndex = commitIndex;
-        }
+	if (commitIndex > this.commitIndex) {
+	    this.commitIndex = commitIndex;
+	}
     }
 
     /**
@@ -92,7 +97,6 @@ public class ServerState {
      */
     @Override
     public String toString() {
-        return "ServerState [term=" + term + ", commitIndex=" + commitIndex + ", votedFor="
-                + votedFor + "]";
-    }
+	return "ServerState [term=" + term + ", commitIndex=" + commitIndex + ", votedFor=" + votedFor + "]";
+        }
 }

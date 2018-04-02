@@ -82,15 +82,28 @@ public class MessagePrinter implements StateMachine {
      * 原生日志对象
      */
     private org.apache.log4j.Logger logger;
+    /**
+     * 端口监听 对象
+     */
     private AsynchronousServerSocketChannel listener;
+    /**
+     * 由{@link Runtime#availableProcessors()} 构造的线程池
+     */
     private ExecutorService executorService;
+    /**
+     * 当前RPC服务器 消息发送对象
+     */
     private RaftMessageSender messageSender;
     private Map<String, CompletableFuture<String>> uncommittedRequests = new ConcurrentHashMap<String, CompletableFuture<String>>();
+    
     /**
      * 
      * 根据参数构造 类{@link MessagePrinter}对象
+     * 
      * @param baseDir
+     *            目录
      * @param listeningPort
+     *            监听端口(目前由外部传入)
      */
     public MessagePrinter(Path baseDir, int listeningPort){
         this.port = listeningPort;
@@ -106,6 +119,7 @@ public class MessagePrinter implements StateMachine {
         }
     }
 
+    @Override
     public void start(RaftMessageSender messageSender){
         this.messageSender = messageSender;
         int processors = Runtime.getRuntime().availableProcessors();
@@ -316,7 +330,7 @@ public class MessagePrinter implements StateMachine {
         String message = new String(data, StandardCharsets.UTF_8);
         System.out.println(String.format("PreCommit:%s at %d", message, logIndex));
         int index = message.indexOf(':');
-        if(index > 0){// TODO K值相同时，疑似 App类中 多条日志 会覆盖？
+	if (index > 0) {// TODO ?不理解 K值相同时，疑似 App类中 多条日志 会覆盖？
             this.pendingMessages.put(message.substring(0, index), message);
         }
     }

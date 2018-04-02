@@ -43,7 +43,7 @@ public class RaftClient {
      */
     private ClusterConfiguration configuration;
     /**
-     * 系统日志对象
+     * 自定义系统日志对象
      */
     private Logger logger;
     private Timer timer;

@@ -21,17 +21,22 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 状态机接口类 <br>
- * TODO 具体干啥的？ 木知
+ * TODO ?不理解 具体干啥的？ 木知
  */
 public interface StateMachine {
 
-	/**
-	 * Starts the state machine, called by RaftConsensus, RaftConsensus will pass an instance of
-	 * RaftMessageSender for the state machine to send logs to cluster, so that all state machines
-	 * in the same cluster could be in synced
-	 * @param raftMessageSender rpc message sender
-	 */
-	public void start(RaftMessageSender raftMessageSender);
+    /**
+     * Starts the state machine, called by RaftConsensus, RaftConsensus will
+     * pass an instance of RaftMessageSender for the state machine to send logs
+     * to cluster, so that all state machines in the same cluster could be in
+     * synced<br>
+     * 启动状态机，由RaftConsensus调用，RaftConsensus将传递一个RaftMessageSender实例给状态机发送日志到集群，
+     * 以便同一集群中的所有状态机可以同步
+     * 
+     * @param raftMessageSender
+     *            rpc message sender RPC消息发送对象
+     */
+    public void start(RaftMessageSender raftMessageSender);
 	
     /**
      * Commit the log data at the {@code logIndex}

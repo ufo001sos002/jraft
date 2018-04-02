@@ -49,7 +49,7 @@ public class RpcTcpListener implements RpcListener {
      */
     private int port;
     /**
-     * 当前类 日志输出对象
+     * 当前类 日志输出对象(原生)
      */
     private Logger logger;
     /**
@@ -64,11 +64,15 @@ public class RpcTcpListener implements RpcListener {
      * 访问本RPC Server的 所有 RPC TCP socket通道 对象集合 , 可用于主动关闭连接
      */
     private List<AsynchronousSocketChannel> connections;
+    
     /**
      * 
      * 根据参数构造 类{@link RpcTcpListener} 对象
-     * @param port RPC TCP 监听端口
-     * @param executorService 连接池对象 为本对象独占, {@link #stop()} 将关闭该连接池,因此，其他地方不能使用
+     * 
+     * @param port
+     *            本机RPC TCP 监听端口
+     * @param executorService
+     *            连接池对象 为本对象独占, {@link #stop()} 将关闭该连接池,因此，其他地方不能使用
      */
     public RpcTcpListener(int port, ExecutorService executorService){
         this.port = port;

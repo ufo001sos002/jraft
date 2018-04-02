@@ -25,11 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
- * Peer server in the same cluster for local server
- * this represents a peer for local server, 
- * it could be a leader, 
- * however, if local server is not a leader, though it has a list of peer servers, they are not used
- * <br>集群Server服务器对象
+ * Peer server in the same cluster for local server this represents a peer for
+ * local server, it could be a leader, however, if local server is not a leader,
+ * though it has a list of peer servers, they are not used <br>
+ * 其他集群Server 对象
+ * 
  * @author Data Technology LLC
  *
  */
@@ -55,7 +55,7 @@ public class PeerServer {
      */
     private int rpcBackoffInterval;
     /**
-     * 最大心跳间隔 (毫秒) TODO {@link RaftParameters#getMaxHeartbeatInterval()} 中计算方式如何得来?
+     * 最大心跳间隔 (毫秒) TODO ?不理解{@link RaftParameters#getMaxHeartbeatInterval()} 中计算方式如何得来?
      */
     private int maxHeartbeatInterval;
     /**
@@ -86,6 +86,9 @@ public class PeerServer {
      * 心跳启动(true 开启) 默认未开启
      */
     private boolean heartbeatEnabled;
+    /**
+     * TODO ?不理解 注释作用?
+     */
     private SnapshotSyncContext snapshotSyncContext;
     /**
      * 上下文共享计划线程池对象 {@link RaftContext#getScheduledExecutor()}
@@ -202,18 +205,37 @@ public class PeerServer {
         }
     }
 
+    /**
+     * 
+     * 
+     * @return 返回 {@link #nextLogIndex}
+     */
     public long getNextLogIndex() {
         return nextLogIndex;
     }
 
+    /**
+     * 设置 {@link #nextLogIndex} 值
+     * 
+     * @param nextLogIndex
+     */
     public void setNextLogIndex(long nextLogIndex) {
         this.nextLogIndex = nextLogIndex;
     }
 
+    /**
+     * 
+     * @return 返回 {@link #matchedIndex} 值
+     */
     public long getMatchedIndex(){
         return this.matchedIndex;
     }
 
+    /**
+     * 设置 {@link #matchedIndex} 值
+     * 
+     * @param matchedIndex
+     */
     public void setMatchedIndex(long matchedIndex){
         this.matchedIndex = matchedIndex;
     }
