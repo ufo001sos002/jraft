@@ -91,9 +91,9 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
     private RandomAccessFile dataFile;
     /**
      * 文件对象 文件名： {@link #LOG_INDEX_FILE} <br>
-     * 存储数据：{@link #dataFile}中每条 数据记录 长度:<br>
-     * 每{@link Long#BYTES} 长度对应一条数据记录 长度, <br>
+     * 存储数据：每{@link Long#BYTES} 长度对应 某 数据记录 存储之前 时 {@link #dataFile}的 数据记录 长度:<br>
      * 文件长度 {@link RandomAccessFile#length()} / {@link Long#BYTES} 为 数据记录 数,<br>
+     * 每次存储数据之前 都会记录 之前 数据文件 长度,即最后一条 为 倒数第二条的数据记录长度,当前数据文件长度-此值 = 最后一条数据记录长度
      */
     private RandomAccessFile indexFile;
     /**
