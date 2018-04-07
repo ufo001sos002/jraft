@@ -53,4 +53,14 @@ public class RaftResponseMessage extends RaftMessage {
 		this.accepted = accepted;
 	}
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+	return "RaftResponseMessage [nextIndex=" + nextIndex + ", accepted=" + accepted + "]";
+    }
+
 }
