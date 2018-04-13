@@ -100,9 +100,15 @@ public interface StateMachine {
     public CompletableFuture<Boolean> createSnapshot(Snapshot snapshot);
     
     /**
-     * Save the state of state machine to ensure the state machine is in a good state, then exit the system
-     * this MUST exits the system to protect the safety of the algorithm
-     * @param code 0 indicates the system is gracefully shutdown, -1 indicates there are some errors which cannot be recovered
+     * Save the state of state machine to ensure the state machine is in a good
+     * state, then exit the system this MUST exits the system to protect the
+     * safety of the algorithm<br>
+     * 保存状态机状态以确保状态机处于良好状态，然后退出系统，必须退出系统以保护算法的安全性
+     * 
+     * @param code
+     *            0 indicates the system is gracefully shutdown, -1 indicates
+     *            there are some errors which cannot be recovered<br>
+     *            0表示系统正常关机，-1表示存在一些无法恢复的错误
      */
     public void exit(int code);
 }

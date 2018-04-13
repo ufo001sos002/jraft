@@ -13,13 +13,11 @@ import java.util.concurrent.CompletableFuture;
  * 4、VIP 绑定 监听
  * 5、客户端连接数据转发
  * 6、节点之间实例服务切换
+ * 监管实例建立(数据源 数据转发)、监管实例迁移(主动或故障)
  * </pre>
  */
 public class Middleware implements StateMachine {
 
-    /* (non-Javadoc)
-     * @see net.data.technology.jraft.StateMachine#start(net.data.technology.jraft.RaftMessageSender)
-     */
     @Override
     public void start(RaftMessageSender raftMessageSender) {
 	// TODO Auto-generated method stub

@@ -4,17 +4,18 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 
 /**
  * 网络相关工具包
  */
 public class NetworkTools {
-    /**
-     * logger 日志对象
-     */
-    private static final Logger logger = LoggerFactory.getLogger(NetworkTools.class);
+    // /**
+    // * logger 日志对象
+    // */
+    // private static final Logger logger =
+    // LoggerFactory.getLogger(NetworkTools.class);
     /**
      * 默认超时时间{@value}(毫秒)
      */
@@ -33,13 +34,17 @@ public class NetworkTools {
 	    return netif == null ? null : netif.getName();
 	} catch (Exception e) {
 	    // e.printStackTrace();
-	    logger.warn("getDeviceByIp(" + ip + ") is error:" + e.getMessage(), e);
+	    // logger.warn("getDeviceByIp(" + ip + ") is error:" +
+	    // e.getMessage(), e);
+	    System.err.println("getDeviceByIp(" + ip + ") is error:" + e.getMessage());
+	    e.printStackTrace();
 	}
 	return null;
     }
 
     /**
-     * 通过命令ip addr add ip dev deviceName 命令对网卡增加IP绑定
+     * 通过命令ip addr add ip dev deviceName 命令对网卡增加IP绑定<br>
+     * TODO 还需再window系统下添加 方便调试
      * 
      * @param ip
      *            目前仅支持ipv4 字符串
@@ -61,19 +66,28 @@ public class NetworkTools {
 		    err.read(errArray, 0, length);
 		    String errorInfo = new String(errArray);
 		    if (errorInfo.toLowerCase().indexOf("file exists") > 0) {
-			if (logger.isInfoEnabled()) {
-			    logger.info("run 'ip addr add " + ip + "/32 dev " + deviceName + "' is error:" + errorInfo);
-			}
+			// if (logger.isInfoEnabled()) {
+			// logger.info("run 'ip addr add " + ip + "/32 dev " +
+			// deviceName + "' is error:" + errorInfo);
+			// }
+			System.out.println(
+				"run 'ip addr add " + ip + "/32 dev " + deviceName + "' is error:" + errorInfo);
 			return true;
 		    } else {
-			logger.warn("run 'ip addr add " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
+			// logger.warn("run 'ip addr add " + ip + "/32 dev" +
+			// deviceName + "' is error:" + errorInfo);
+			System.err
+				.println("run 'ip addr add " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
 		    }
 		}
 	    } else {
 		return true;
 	    }
 	} catch (Exception e) {
-	    logger.warn("run 'ip addr add " + ip + "/32 dev" + deviceName + "' is error:" + e.getMessage(), e);
+	    // logger.warn("run 'ip addr add " + ip + "/32 dev" + deviceName +
+	    // "' is error:" + e.getMessage(), e);
+	    System.err.println("run 'ip addr add " + ip + "/32 dev" + deviceName + "' is error:" + e.getMessage());
+	    e.printStackTrace();
 	} finally {
 	    if (process != null) {
 		process.destroy();
@@ -83,7 +97,8 @@ public class NetworkTools {
     }
 
     /**
-     * 通过命令ip addr del ip dev deviceName 命令解除网卡绑定IP
+     * 通过命令ip addr del ip dev deviceName 命令解除网卡绑定IP<br>
+     * TODO 还需再window系统下添加 方便调试
      * 
      * @param ip
      *            目前仅支持ipv4 字符串
@@ -105,19 +120,28 @@ public class NetworkTools {
 		    err.read(errArray, 0, length);
 		    String errorInfo = new String(errArray);
 		    if (errorInfo.toLowerCase().indexOf("file exists") > 0) {
-			if (logger.isInfoEnabled()) {
-			    logger.info("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
-			}
+			// if (logger.isInfoEnabled()) {
+			// logger.info("run 'ip addr del " + ip + "/32 dev" +
+			// deviceName + "' is error:" + errorInfo);
+			// }
+			System.out
+				.println("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
 			return true;
 		    } else {
-			logger.warn("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
+			// logger.warn("run 'ip addr del " + ip + "/32 dev" +
+			// deviceName + "' is error:" + errorInfo);
+			System.err
+				.println("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
 		    }
 		}
 	    } else {
 		return true;
 	    }
 	} catch (Exception e) {
-	    logger.warn("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + e.getMessage(), e);
+	    // logger.warn("run 'ip addr del " + ip + "/32 dev" + deviceName +
+	    // "' is error:" + e.getMessage(), e);
+	    System.err.println("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + e.getMessage());
+	    e.printStackTrace();
 	} finally {
 	    if (process != null) {
 		process.destroy();
@@ -150,9 +174,11 @@ public class NetworkTools {
 	try {
 	    return InetAddress.getByName(ip).isReachable(timeout);
 	} catch (Exception e) {
-	    if (logger.isInfoEnabled()) {
-		logger.info("ping " + ip + "is error:" + e.getMessage(), e);
-	    }
+	    // if (logger.isInfoEnabled()) {
+	    // logger.info("ping " + ip + "is error:" + e.getMessage(), e);
+	    // }
+	    System.err.println("ping " + ip + "is error:" + e.getMessage());
+	    e.printStackTrace();
 	}
 	return false;
     }
@@ -216,7 +242,7 @@ public class NetworkTools {
 	    if (pingIp(vip, 1000)) { // ping vip 是否成功
 		return -1; // 解除绑定VIP失败
 	    } else {
-		return 0;// 解除绑定成功
+		return 1;// 解除绑定成功
 	    }
 	}
 	return -1;
@@ -227,7 +253,12 @@ public class NetworkTools {
      * @param args 
      */
     public static void main(String[] args) {
-
+	System.out.println("localIp:" + args[0] + ",vip:" + args[1] + " add result:" + addIp(args[0], args[1]));
+	try {
+	    Thread.sleep(20000);
+	} catch (InterruptedException e) {
+	}
+	System.out.println("localIp:" + args[0] + ",vip:" + args[1] + " del result:" + delIp(args[1]));
     }
 
 }
