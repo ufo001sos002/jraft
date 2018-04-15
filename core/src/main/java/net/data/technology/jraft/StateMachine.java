@@ -39,16 +39,24 @@ public interface StateMachine {
     public void start(RaftMessageSender raftMessageSender);
 	
     /**
-     * Commit the log data at the {@code logIndex}
-     * @param logIndex the log index in the logStore
-     * @param data application data to commit
+     * Commit the log data at the {@code logIndex} <br>
+     * 提交对应 数据记录索引位置 的数据 进行应用
+     * 
+     * @param logIndex
+     *            the log index in the logStore
+     * @param data
+     *            application data to commit
      */
     public void commit(long logIndex, byte[] data);
 
     /**
-     * Rollback a preCommit item at index {@code logIndex}
-     * @param logIndex log index to be rolled back
-     * @param data application data to rollback
+     * Rollback a preCommit item at index {@code logIndex} <br>
+     * 回滚预提交的项 中的数据
+     * 
+     * @param logIndex
+     *            log index to be rolled back
+     * @param data
+     *            application data to rollback
      */
     public void rollback(long logIndex, byte[] data);
 
@@ -91,10 +99,13 @@ public interface StateMachine {
     public Snapshot getLastSnapshot();
 
     /**
-     * Create a snapshot data based on the snapshot information asynchronously
-     * set the future to true if snapshot is successfully created, otherwise, 
-     * set it to false
-     * @param snapshot the snapshot info
+     * Create a snapshot data based on the snapshot information asynchronously set
+     * the future to true if snapshot is successfully created, otherwise, set it to
+     * false <br>
+     * 根据快照信息创建快照数据，如果快照创建成功，则将未来设置为true，否则将其设置为false
+     * 
+     * @param snapshot
+     *            the snapshot info
      * @return true if snapshot is created successfully, otherwise false
      */
     public CompletableFuture<Boolean> createSnapshot(Snapshot snapshot);

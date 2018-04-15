@@ -67,10 +67,16 @@ public class MessagePrinter implements StateMachine {
      * 提交索引
      */
     private long commitIndex;
+    /**
+     * K：消息头 fmt addsrv rmsrv 等<br>
+     * V：消息内容<br>
+     * 当前已应用的数据
+     */
     private Map<String, String> messages = new ConcurrentHashMap<String, String>();
     /**
-     * K：消息头 fmt addsrv rmsrv 等
-     * V：消息内容
+     * K：消息头 fmt addsrv rmsrv 等<br>
+     * V：消息内容<br>
+     * 准备应用的的数据
      */
     private Map<String, String> pendingMessages = new ConcurrentHashMap<String, String>();
     private boolean snapshotInprogress = false;
@@ -517,6 +523,11 @@ public class MessagePrinter implements StateMachine {
         });
     }
 
+    /**
+     * 增加 数据
+     * 
+     * @param message
+     */
     private void addMessage(String message){
         int index = message.indexOf(':');
         if(index <= 0){

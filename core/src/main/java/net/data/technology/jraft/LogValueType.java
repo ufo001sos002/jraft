@@ -19,7 +19,7 @@ package net.data.technology.jraft;
 
 /**
  * Log value type for the value of a log entry<br/>
- * (日志记录类型)
+ * (数据记录 值类型)
  * 
  * @author Data Technology LLC
  *

@@ -8,7 +8,7 @@ import java.net.NetworkInterface;
 //import org.slf4j.LoggerFactory;
 
 /**
- * 网络相关工具包
+ * 网络相关工具包 TODO 需要添加 远程 SSH 移除 VIP的方法 以免本机程序挂了
  */
 public class NetworkTools {
     // /**

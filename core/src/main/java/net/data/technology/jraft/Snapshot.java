@@ -21,16 +21,51 @@ package net.data.technology.jraft;
  * 快照类
  */
 public class Snapshot {
-
+    /**
+     * 最后一个 数据记录 的 索引位置
+     */
     private long lastLogIndex;
+    /**
+     * 最后一个 数据索引 的 任期
+     */
     private long lastLogTerm;
+    /**
+     * 数据大小
+     */
     private long size;
+    /**
+     * 集群最后配置
+     */
     private ClusterConfiguration lastConfig;
 
+    /**
+     * 
+     * 根据参数构造 类{@link Snapshot} 对象 {@link #size} 默认0
+     * 
+     * @param lastLogIndex
+     *            最后一个 数据记录 的 索引位置
+     * @param lastLogTerm
+     *            最后一个 数据索引 的 任期
+     * @param lastConfig
+     *            集群最后配置
+     */
     public Snapshot(long lastLogIndex, long lastLogTerm, ClusterConfiguration lastConfig){
         this(lastLogIndex, lastLogTerm, lastConfig, 0);
     }
 
+    /**
+     * 
+     * 根据参数构造 类{@link Snapshot} 对象
+     * 
+     * @param lastLogIndex
+     *            最后一个 数据记录 的 索引位置
+     * @param lastLogTerm
+     *            最后一个 数据索引 的 任期
+     * @param lastConfig
+     *            集群最后配置
+     * @param size
+     *            数据大小
+     */
     public Snapshot(long lastLogIndex, long lastLogTerm, ClusterConfiguration lastConfig, long size){
         this.lastConfig = lastConfig;
         this.lastLogIndex = lastLogIndex;
@@ -38,19 +73,32 @@ public class Snapshot {
         this.size = size;
     }
 
+    /**
+     * @return 返回 {@link #lastLogIndex}值
+     */
     public long getLastLogIndex() {
         return lastLogIndex;
     }
 
+    /**
+     * @return 返回 {@link #lastLogTerm}值
+     */
     public long getLastLogTerm() {
         return lastLogTerm;
     }
 
+    /**
+     * @return 返回 {@link #size}值
+     */
+    public long getSize() {
+	return size;
+    }
+
+    /**
+     * @return 返回 {@link #lastConfig}值
+     */
     public ClusterConfiguration getLastConfig() {
         return lastConfig;
     }
 
-    public long getSize(){
-        return this.size;
-    }
 }
