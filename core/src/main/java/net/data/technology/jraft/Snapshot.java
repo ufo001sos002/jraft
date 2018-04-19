@@ -101,4 +101,15 @@ public class Snapshot {
         return lastConfig;
     }
 
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+	return "Snapshot [lastLogIndex=" + lastLogIndex + ", lastLogTerm=" + lastLogTerm + ", size=" + size
+		+ ", lastConfig=" + lastConfig + "]";
+    }
+
 }

@@ -127,6 +127,7 @@ public class MessagePrinter implements StateMachine {
 
     @Override
     public void start(RaftMessageSender messageSender){
+	System.out.println("StateMachine start!");
         this.messageSender = messageSender;
         int processors = Runtime.getRuntime().availableProcessors();
         executorService = Executors.newFixedThreadPool(processors);
@@ -142,6 +143,7 @@ public class MessagePrinter implements StateMachine {
     }
 
     public void stop(){
+	System.out.println("StateMachine stop!");
         if(this.listener != null){
             try {
                 this.listener.close();
@@ -161,13 +163,15 @@ public class MessagePrinter implements StateMachine {
     @Override
     public void commit(long logIndex, byte[] data) {
         String message = new String(data, StandardCharsets.UTF_8);
-        System.out.printf("commit: %d\t%s\n", logIndex, message);
+	System.out.printf("StateMachine commit: %d\t%s\n", logIndex, message);
         this.commitIndex = logIndex;
         this.addMessage(message);
     }
 
     @Override
     public void saveSnapshotData(Snapshot snapshot, long offset, byte[] data) {
+	System.out.printf("StateMachine saveSnapshotData: %d\t%d\t%s\n", offset, data == null ? 0 : data.length,
+		snapshot);
         Path filePath = this.snapshotStore.resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
         try{
             if(!Files.exists(filePath)){
@@ -185,6 +189,7 @@ public class MessagePrinter implements StateMachine {
 
     @Override
     public boolean applySnapshot(Snapshot snapshot) {
+	System.out.printf("StateMachine applySnapshot: %s\n", snapshot);
         Path filePath = this.snapshotStore.resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
         if(!Files.exists(filePath)){
             return false;
@@ -219,6 +224,8 @@ public class MessagePrinter implements StateMachine {
 
     @Override
     public int readSnapshotData(Snapshot snapshot, long offset, byte[] buffer) {
+	System.out.printf("StateMachine readSnapshotData: %d\t%d\t%s\n", offset, buffer == null ? 0 : buffer.length,
+		snapshot);
         Path filePath = this.snapshotStore.resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
         if(!Files.exists(filePath)){
             return -1;
@@ -238,6 +245,7 @@ public class MessagePrinter implements StateMachine {
 
     @Override
     public CompletableFuture<Boolean> createSnapshot(Snapshot snapshot) {
+	System.out.printf("StateMachine createSnapshot: %s\n", snapshot);
         if(snapshot.getLastLogIndex() > this.commitIndex){
             return CompletableFuture.completedFuture(false);
         }
@@ -281,6 +289,7 @@ public class MessagePrinter implements StateMachine {
     @Override
     public Snapshot getLastSnapshot() {
         try{
+	    System.out.printf("StateMachine getLastSnapshot\n");
             Stream<Path> files = Files.list(this.snapshotStore);
             Path latestSnapshot = null;
             long maxLastLogIndex = 0;
@@ -324,17 +333,17 @@ public class MessagePrinter implements StateMachine {
             this.pendingMessages.remove(key);
             CompletableFuture<String> future = this.uncommittedRequests.get(key);
             if(future != null){
-                future.complete("Rolled back.");
+		future.complete("Rolled back.");
             }
         }
 
-        System.out.println(String.format("Rollback index %d", logIndex));
+	System.out.println(String.format("StateMachine Rollback index %d", logIndex));
     }
 
     @Override
     public void preCommit(long logIndex, byte[] data) {
         String message = new String(data, StandardCharsets.UTF_8);
-        System.out.println(String.format("PreCommit:%s at %d", message, logIndex));
+	System.out.println(String.format("StateMachine PreCommit:%s at %d", message, logIndex));
         int index = message.indexOf(':');
 	if (index > 0) {// TODO ?不理解 K值相同时，疑似 App类中 多条日志 会覆盖？
             this.pendingMessages.put(message.substring(0, index), message);
@@ -343,6 +352,7 @@ public class MessagePrinter implements StateMachine {
     
     @Override
     public void exit(int code){
+	System.out.printf("StateMachine exit: %d\n", code);
         System.exit(code);
     }
 

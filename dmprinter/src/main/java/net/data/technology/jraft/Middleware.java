@@ -27,7 +27,11 @@ import java.util.concurrent.CompletableFuture;
  * 、超过半数挂了，raft拒绝HCM_S_R的配置，HCM报警
  * 、对于新添加的节点 或 故障重启节点  可考虑将 未分配的 实例(即库存状态) 分配过去，以免浪费资源
  * 、Leader需对 公共配置中 实例 未指定 处理节点的（即实例在 分配配置 中无节点指定的进行指定操作以及考虑 未分配 的实例 重新指定分配(添加实例时、节点变更、选举完毕 时等)
+ * 、原Raft通讯的相关文件文件不做任何改动依然复用
+ * 、可以通过HCM_S_S告知HCM 各节点 状态(包含 角色等)
  * 、先定义流程————>再定义JSON
+ * 、提供给HCM Raft客服端包，并编写方法 提供接口 由HCM直接调用
+ * 、任务结果taskId回包要么Leader 要么节点 以HCM_S_S 回复告知
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
@@ -40,7 +44,7 @@ import java.util.concurrent.CompletableFuture;
  * ★整个流程：创建集群、添加实例、分配实例(后续实例停用收回类似)、添加集群节点、实例动态切换、移除集群节点、集群节点故障发生(follower、Leader)、
  * 某个集群节点重启、所有集群节点都重启
  * 
- * 创建集群： (状态此时各种配置都为空)
+ * 创建集群：(状态此时各种配置都为空)
  * 、HCS启动后与HCM通讯(心跳通道,即HCM_S_S)，HCM根据hcsId得出所属集群hcsGroupId 并 下发 公共配置、私有配置 并保持长联(作为后续通讯备用)
  * 、集群根据 公共配置 中 集群信息 选出Leader 与 HCM_S_R 进行后续通讯
  * 、等待后续 HCM_S_R 的 公共配置至Leader (也可以包含私有配置,但需指定hcsId) ，通过Raft下发 保证下发至个节点 并由状态机 应用(应用结果可由HCM_S_S 返回告知)
@@ -56,6 +60,7 @@ import java.util.concurrent.CompletableFuture;
  * 
  * 添加集群节点：
  * 、HCS启动后与HCM通讯(心跳通道,即HCM_S_S)，HCM根据hcsId得出所属集群hcsGroupId 并 下发 公共配置、私有配置 并保持长联(作为后续通讯备用)
+ * 、HCS_S_R下发添加集群至Leader,Leader同步至各节点直至commit
  * 、同步配置(但分配配置中无节点实例) 
  * 、并等待后续Leader下发的分配配置 包含 该节点 实例信息 则进行实例相应操作  
  * 
@@ -175,7 +180,10 @@ public class Middleware implements StateMachine {
 	return null;
     }
 
-    /* (non-Javadoc)
+    /**
+     * 中间件故障 不提供服务 发送完对应通知之后 JVM退出
+     * 
+     * @param code
      * @see net.data.technology.jraft.StateMachine#exit(int)
      */
     @Override

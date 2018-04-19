@@ -26,6 +26,7 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
@@ -35,6 +36,7 @@ import org.apache.log4j.Logger;
 import net.data.technology.jraft.RaftRequestMessage;
 import net.data.technology.jraft.RaftResponseMessage;
 import net.data.technology.jraft.RpcClient;
+import net.data.technology.jraft.tools.Tools;
 
 /**
  * RPC TCP 客户端 实现类 实现 {@link RpcClient} 接口类
@@ -44,6 +46,10 @@ public class RpcTcpClient implements RpcClient {
      * 当前Socket通道对象
      */
     private AsynchronousSocketChannel connection;
+    /**
+     * 连接可用时 为true；
+     */
+    private AtomicBoolean connectionUsable = new AtomicBoolean();
     /**
      * 通道组 用于创建通道
      */
@@ -99,6 +105,16 @@ public class RpcTcpClient implements RpcClient {
         }
     }
 
+    /**
+     * @return {@link #connection} 的值
+     */
+    private AsynchronousSocketChannel getConnection() {
+	while (connection != null && connection.isOpen() && !connectionUsable.get()) {
+	    Tools.sleep(10);
+	}
+	return connection;
+    }
+
     @Override
     public synchronized CompletableFuture<RaftResponseMessage> send(final RaftRequestMessage request) {
 	if (logger.isDebugEnabled()) {
@@ -110,6 +126,7 @@ public class RpcTcpClient implements RpcClient {
             try{
                 this.connection = AsynchronousSocketChannel.open(this.channelGroup);
                 this.connection.connect(this.remote, new AsyncTask<RaftRequestMessage>(request, result), handlerFrom((Void v, AsyncTask<RaftRequestMessage> task) -> {
+			    this.connectionUsable.compareAndSet(false, true);
                     sendAndRead(task, false);
                 }));
             }catch(Throwable error){
@@ -142,7 +159,8 @@ public class RpcTcpClient implements RpcClient {
 
         ByteBuffer buffer = ByteBuffer.wrap(BinaryUtils.messageToBytes(task.input));
         try{
-            AsyncUtility.writeToChannel(this.connection, buffer, task, handlerFrom((Integer bytesSent, AsyncTask<RaftRequestMessage> context) -> {
+	    AsyncUtility.writeToChannel(getConnection(), buffer, task,
+		    handlerFrom((Integer bytesSent, AsyncTask<RaftRequestMessage> context) -> {
                 if(bytesSent.intValue() < buffer.limit()){
 			    if (logger.isInfoEnabled()) {
 				logger.info("failed to sent the request to remote server.");
@@ -213,7 +231,7 @@ public class RpcTcpClient implements RpcClient {
 
         try{
             this.logger.debug("reading response from socket...");
-            AsyncUtility.readFromChannel(this.connection, task.input, task, handler);
+	    AsyncUtility.readFromChannel(getConnection(), task.input, task, handler);
         }catch(Exception readError){
             logger.info("failed to read from socket", readError);
             task.future.completeExceptionally(readError);
@@ -238,6 +256,7 @@ public class RpcTcpClient implements RpcClient {
         this.logger.debug("close the socket due to errors");
         try{
             if(this.connection != null){
+		connectionUsable.compareAndSet(true, false);
                 this.connection.close();
                 this.connection = null;
             }

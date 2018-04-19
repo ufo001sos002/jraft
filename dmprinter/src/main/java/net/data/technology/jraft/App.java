@@ -95,7 +95,7 @@ public class App
                 .withMaximumAppendingSize(200)
                 .withLogSyncBatchSize(5)
                 .withLogSyncStoppingGap(5)
-                .withSnapshotEnabled(5000)
+		.withSnapshotEnabled(10)
                 .withSyncSnapshotBlockSize(0);
 	// 构建状态机 对象
 	MessagePrinter stateMachine = new MessagePrinter(baseDir, port);
