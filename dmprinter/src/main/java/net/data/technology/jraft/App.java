@@ -85,7 +85,8 @@ public class App
             port = Integer.parseInt(args[2]);
         }
 	// 构建当前集群Server 的 统一资源标识符 对象
-        URI localEndpoint = new URI(config.getServer(stateManager.getServerId()).getEndpoint());
+	// TODO 移出的节点 在cluster.json中丢失 导致移出节点再启动空指针
+	URI localEndpoint = new URI(config.getServer(stateManager.getServerId()).getEndpoint());
 	// 构建Raft 参数
         RaftParameters raftParameters = new RaftParameters()
                 .withElectionTimeoutUpper(5000)

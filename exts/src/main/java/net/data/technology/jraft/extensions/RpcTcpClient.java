@@ -109,8 +109,10 @@ public class RpcTcpClient implements RpcClient {
      * @return {@link #connection} 的值
      */
     private AsynchronousSocketChannel getConnection() {
-	while (connection != null && connection.isOpen() && !connectionUsable.get()) {
+	int num = 1000; // 最大等待10s
+	while (connection != null && connection.isOpen() && !connectionUsable.get() && num > 0) {
 	    Tools.sleep(10);
+	    num--;
 	}
 	return connection;
     }
@@ -246,14 +248,18 @@ public class RpcTcpClient implements RpcClient {
      */
     private <V, I> CompletionHandler<V, AsyncTask<I>> handlerFrom(BiConsumer<V, AsyncTask<I>> completed) {
         return AsyncUtility.handlerFrom(completed, (Throwable error, AsyncTask<I> context) -> {
-                        this.logger.info("socket error", error);
-                        context.future.completeExceptionally(error);
-                        closeSocket();
-                    });
+	    if (this.logger.isInfoEnabled()) {
+		this.logger.info("socket error", error);
+	    }
+	    context.future.completeExceptionally(error);
+	    closeSocket();
+	});
     }
 
     private synchronized void closeSocket(){
-        this.logger.debug("close the socket due to errors");
+	if (this.logger.isDebugEnabled()) {
+	    this.logger.debug("close the socket due to errors");
+	}
         try{
             if(this.connection != null){
 		connectionUsable.compareAndSet(true, false);
@@ -261,7 +267,9 @@ public class RpcTcpClient implements RpcClient {
                 this.connection = null;
             }
         }catch(IOException ex){
-            this.logger.info("failed to close socket", ex);
+	    if (this.logger.isInfoEnabled()) {
+		this.logger.info("failed to close socket", ex);
+	    }
         }
 
         while(true){

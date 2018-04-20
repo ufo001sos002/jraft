@@ -9,6 +9,8 @@ import java.net.NetworkInterface;
 
 /**
  * 网络相关工具包 TODO 需要添加 远程 SSH 移除 VIP的方法 以免本机程序挂了
+ * /HotDB-Cloud-Management/src/main/java/cn/hotdb/cloud/pool/SSHPoolManager.java
+ * /HotDB-Cloud-Management/src/main/java/cn/hotdb/cloud/util/SSHOperater.java
  */
 public class NetworkTools {
     // /**
