@@ -95,8 +95,10 @@ import java.util.concurrent.CompletableFuture;
  */
 public class Middleware implements StateMachine {
 
+
     /**
-     * 可以作为中间件相关启动初始化方法()
+     * 中间件启动完毕 且初始化完Raft集群后 初始化此方法(类似 {@link RaftConsensus#run(RaftContext)}调用阶段) 参数
+     * {@link RaftMessageSender} 用于状态机后续 发配置给集群(即分配日志 可通过该途径)
      * 
      * @see net.data.technology.jraft.StateMachine#start(net.data.technology.jraft.RaftMessageSender)
      */
@@ -204,6 +206,56 @@ public class Middleware implements StateMachine {
     @Override
     public void exit(int code) {
 	// TODO Auto-generated method stub
+
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * net.data.technology.jraft.StateMachine#notifyServerRole(net.data.technology.
+     * jraft.ServerRole)
+     */
+    @Override
+    public void notifyServerRole(ServerRole serverRole) {
+	// TODO Auto-generated method stub
+
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * net.data.technology.jraft.StateMachine#notifyServerStatus(java.lang.String,
+     * int)
+     */
+    @Override
+    public void notifyServerStatus(String hcsId, int status) {
+	// TODO Auto-generated method stub
+
+    }
+
+    /**
+     * 初始化启动
+     */
+    private void initStart() {
+	// TODO 初始化启动
+    }
+
+    /**
+     * 根据参数构造 类{@link Middleware} 对象
+     */
+    public Middleware() {
+	super();
+	// TODO Auto-generated constructor stub
+    }
+
+    /**
+     * 启动方法
+     * 
+     * @param args
+     */
+    public static void main(String[] args) {
 
     }
 

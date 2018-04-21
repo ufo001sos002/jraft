@@ -612,5 +612,30 @@ public class MessagePrinter implements StateMachine {
                 + uncommittedRequests.size() + "]";
     }
 
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * net.data.technology.jraft.StateMachine#notifyServerRole(net.data.technology.
+     * jraft.ServerRole)
+     */
+    @Override
+    public void notifyServerRole(ServerRole serverRole) {
+	// TODO Auto-generated method stub
+
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see
+     * net.data.technology.jraft.StateMachine#notifyServerStatus(java.lang.String,
+     * int)
+     */
+    @Override
+    public void notifyServerStatus(String hcsId, int status) {
+	// TODO Auto-generated method stub
+
+    }
 
 }

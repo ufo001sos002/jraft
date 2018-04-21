@@ -26,6 +26,24 @@ import java.util.concurrent.CompletableFuture;
 public interface StateMachine {
 
     /**
+     * 通知当前节点 角色
+     * 
+     * @param serverRole
+     *            当前角色
+     */
+    public void notifyServerRole(ServerRole serverRole);
+
+    /**
+     * 当前为Leader时 某个节点状态(在线/离线)
+     * 
+     * @param hcsId
+     *            节点id
+     * @param status
+     *            节点状态 0 为在线 1为离线
+     */
+    public void notifyServerStatus(String hcsId, int status);
+
+    /**
      * Starts the state machine, called by RaftConsensus, RaftConsensus will
      * pass an instance of RaftMessageSender for the state machine to send logs
      * to cluster, so that all state machines in the same cluster could be in
