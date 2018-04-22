@@ -1,6 +1,11 @@
 package net.data.technology.jraft;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.concurrent.CompletableFuture;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <pre>
@@ -17,11 +22,11 @@ import java.util.concurrent.CompletableFuture;
  * ★解决思路，可考虑：
  * 、考虑从slave对Master也有心跳(以便检测slave是否离线)---可不需要 由Leader发心跳包(raft规则) 判断(如实在网络问题 发包检测都有异常时才考虑 双向心跳包)
  * 、Leader 与 HCM 中Raft客户端进行后续通讯
- * 、长联通道——HCS启动后与HCM通讯 获取配置的连接 长联(拿完配置作为心跳) 以及后续一些 集群节点私有数据 或 私有命令(重启等) 可直接下发 无需通过Leader(HCM_S_R) 以下简称(HCM_S_S)
+ * 、长联通道——HCS启动后与HCM通讯 获取配置的连接 长联(拿完配置作为心跳) 以及后续一些 集群节点私有数据 或 私有命令(重启等) 可直接下发 无需通过Leader(或HCM_S_R) 以下简称(HCM_S_S)
  * 、集群配置由脚本初始化集群时写入配置文件(仅为 长联通道 被否定后 考虑)
  * 、整个Raft文件仅为 HCM中Raft客户端(以下简称HCM_S_R)通道下发配置的下发能到各节点接收，但应用 还是得由状态机 进行(所以最终完整 配置 状态机保留一份 作为快照 ) 
  * 并且 各节点应用结果可由各节点通过 HCM_S_S 告知 HCM
- * 、添加实例时 Leader分配好实例归属哪个节点管理后，后续实例操作均对应某节点服务器，除非节点故障重新计算 在 分配配置中
+ * 、添加实例时 Leader分配好实例归属哪个节点管理后，后续实例操作(包括实例数据源状态变更等)均对应某节点服务器，除非节点故障重新计算 在 分配配置中 
  * 、远程 SSH 移除 VIP的方法 以免本机程序挂了(相关SSH参数得拿) 实例迁移时可考虑Leader 远程移出 或 新增实例的节点 进行
  * 、所有配置的JSON定义 需 均为各节点都可以接收，并状态机对应处理保存(各种添加实例等中间命令，Raft仅保证下发到各节点，各节点保存更新完整配置完毕后根据 命令执行对应操作并HCM_S_S返回结果 )
  * 、超过半数挂了，raft目前预提交成功，但不commit。可能需要考虑 预提交时 直接 反馈 失败 (包括判断配置 会应用相关失败)HCM报警
@@ -32,19 +37,21 @@ import java.util.concurrent.CompletableFuture;
  * 、先定义流程————>再定义JSON
  * 、提供给HCM Raft客服端包，并编写方法 提供接口 由HCM直接调用
  * 、任务结果taskId回包要么Leader 要么节点 以HCM_S_S 回复告知
+ * 、TODO 需要考虑节点初次连接不上HCM，如本地配置有，走了本地配置时，后面连上HCM之后，是否拿最新配置?
+ * （如果拿的话，就需要考虑比对配置是否一致 主要判断 公有配置、私有配置 是否一致，是否方便变更，分配配置 由Leader 计算下发） 
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
  * --公共配置(集群共享配置；包含:整个集群中节点信息、整个集群需监控的实例相关、实例集群分派规则 等等；由HCM 根据所处集群 下发，各集群节点一致) 
  * --私有配置(各集群节点私有启动相关配置；由HCM 根据集群节点分别下发，各集群节点不一致)
- * --分配配置(各节点被分配到 需要管理的实例，由Leader或HCM_S_R下发，各集群节点一致)
+ * --分配配置(各节点被分配到 需要管理的实例，由Leader(或HCM_S_R)下发，各集群节点一致，但主要由Leader计算下发，尤其是程序启动(初次或重启)时)
  * 以上构成完整配置，存在本地配置文件LOCALCONFIG中(也可以拆分多个文件，视情况调整)
  * 
  * 
- * ★整个流程：创建集群、添加实例、分配实例(后续实例停用收回类似)、添加集群节点、实例动态切换、移除集群节点、集群节点故障发生(follower、Leader)、
+ * ★整个流程：创建启动集群、添加实例、分配实例(后续实例停用收回类似)、添加集群节点、实例动态切换、移除集群节点、集群节点故障发生(follower、Leader)、
  * 某个集群节点重启、所有集群节点都重启
  * 
- * 创建集群：(状态此时各种配置都为空)
+ * 创建启动集群：(状态此时各种配置都为空)
  * 、HCS启动后与HCM通讯(心跳通道,即HCM_S_S)，HCM根据hcsId得出所属集群hcsGroupId 并 下发 公共配置、私有配置 并保持长联(作为后续通讯备用)
  * 、集群根据 公共配置 中 集群信息 选出Leader 与 HCM_S_R 进行后续通讯
  * 、等待后续 HCM_S_R 的 公共配置至Leader (也可以包含私有配置,但需指定hcsId) ，通过Raft下发 保证下发至个节点 并由状态机 应用(应用结果可由HCM_S_S 返回告知)
@@ -94,7 +101,14 @@ import java.util.concurrent.CompletableFuture;
  * </pre>
  */
 public class Middleware implements StateMachine {
-
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(Middleware.class);
+    /**
+     * UTF-8 字符集
+     */
+    public static final Charset UTF8_FOR_JAVA = Charset.forName("UTF-8");
 
     /**
      * 中间件启动完毕 且初始化完Raft集群后 初始化此方法(类似 {@link RaftConsensus#run(RaftContext)}调用阶段) 参数
@@ -236,27 +250,185 @@ public class Middleware implements StateMachine {
     }
 
     /**
-     * 初始化启动
+     * 根据参数构造 类{@link Middleware} 对象
      */
-    private void initStart() {
-	// TODO 初始化启动
+    private Middleware() {
     }
 
     /**
-     * 根据参数构造 类{@link Middleware} 对象
+     * 中间件单例对象
      */
-    public Middleware() {
-	super();
-	// TODO Auto-generated constructor stub
+    private static Middleware middleware = new Middleware();
+
+    /**
+     * 获取中间件单例
+     * 
+     * @return {@link #middleware}
+     */
+    public static Middleware getMiddleware() {
+	return middleware;
+    }
+
+    /**
+     * HCS 唯一Id
+     */
+    private volatile String rdsServerId;
+
+    /**
+     * @throws IOException
+     */
+    public void initRdsServerId() throws Exception {
+	rdsServerId = System.getProperty("RDSSERVERID");
+	if (rdsServerId == null || rdsServerId.trim().length() == 0) {
+	    throw new Exception("rds server id is value of null , please start command add value of -DRDSSERVERID!");
+	}
+    }
+    
+    /**
+     * HCM IP
+     */
+    private volatile String controlIP;
+
+    /**
+     * @return socket连接的远控地址
+     * @throws Exception
+     */
+    public void intHCMSocketRemoteAddress() throws Exception {
+	controlIP = System.getProperty("CONTROL_ADDRESS");
+	if (controlIP == null || controlIP.trim().length() == 0) {
+	    throw new Exception(
+		    "management host is value of null , please start command add value of -DCONTROL_ADDRESS!");
+	}
+    }
+
+    /**
+     * HCM port
+     */
+    private volatile int controlPort;
+
+    /**
+     * @return socket连接的远控端口
+     * @throws IOException
+     */
+    public void intHCMSocketPort() throws Exception {
+	String port = System.getProperty("CONTROL_PORT");
+	if (port == null || port.trim().length() == 0) {
+	    throw new Exception(
+		    "management port is value of null , please start command add value of -DCONTROL_PORT!");
+	}
+	try {
+	    controlPort = Integer.parseInt(port);
+	} catch (NumberFormatException e) {
+	    throw new Exception(
+		    "management port is value of not number , please start command add value of -DCONTROL_PORT!");
+	}
+    }
+
+    /**
+     * @return {@link #rdsServerId} 的值
+     */
+    public String getRdsServerId() {
+	return rdsServerId;
+    }
+
+    /**
+     * SSL连接客户端对象 保持长连
+     */
+    private SSLClient sslClient = null;
+
+    /**
+     * @return socket私钥文件路径
+     */
+    private String getSocketKeyPath() {
+	return "hotpu.jks";
+    }
+
+    /**
+     * @return socket私钥文件密码
+     */
+    private String getSocketKeyStorePass() {
+	return "61559355";
+    }
+
+    /**
+     * @return socket私钥密码
+     */
+    private String getSocketKeyPass() {
+	return "61559355";
+    }
+
+    /**
+     * @return socket公钥数字证书文件路径
+     */
+    private String getSocketTrustPath() {
+	return "hotpu-trust.jks";
+    }
+
+    /**
+     * @return socket公钥数字证书文件密码
+     */
+    private String getSocketTrustStorePass() {
+	return "61559355";
+    }
+
+    public int getExecutorSize() {
+	return Runtime.getRuntime().availableProcessors() * 2;
+    }
+
+    /**
+     * 初始化
+     * 
+     * @throws Exception
+     */
+    public void init() throws Exception {
+	initRdsServerId();
+	intHCMSocketRemoteAddress();
+	intHCMSocketPort();
+	this.sslClient = new NIOSSLClient(getSocketKeyPath(), getSocketKeyStorePass(), getSocketKeyPass(),
+		getSocketTrustPath(), getSocketTrustStorePass(), getExecutorSize());
+	// TODO init
+    }
+
+    /**
+     * 启动
+     */
+    public void start() {
+	boolean getHCMNewConfig = false;
+	try {
+	    sslClient.start(this.controlIP, this.controlPort);
+	    SocketPacket.sendStartupInfo(sslClient);
+	    getHCMNewConfig = true;
+	} catch (IOException e) {
+	    logger.error(Markers.SSLCLIENT, "socket connection to management is fail", e);
+	}
+	if (getHCMNewConfig) {
+	    // TODO 等待新配置
+	} else {
+	    // TODO 用本地配置
+	}
+	// TODO start 启动
+    }
+
+    /**
+     * 保存配置文件
+     * 
+     * @return true 保存成功
+     */
+    public boolean saveConfigToFile() throws IOException {
+	// TODO saveConfigToFile;
+	return false;
     }
 
     /**
      * 启动方法
      * 
      * @param args
+     * @throws IOException
      */
-    public static void main(String[] args) {
-
+    public static void main(String[] args) throws Exception {
+	Middleware middleware = getMiddleware();
+	middleware.init();
+	middleware.start();
     }
 
 }

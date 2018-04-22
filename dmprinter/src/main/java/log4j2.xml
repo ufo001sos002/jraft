@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30">
+    <properties>
+        <property name="logPath">log</property>
+    </properties>
+    <Appenders>
+        <Console
+            name="Console"
+            target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-4p] [%marker] [%t] %c{1}.%M(%L) - %msg%n" />
+            <filters>
+                <MarkerFilter marker="FAILOVER" onMatch="ACCEPT" onMismatch="NEUTRAL"></MarkerFilter>
+            </filters>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Root level="info">
+           <AppenderRef ref="Console" /> 
+        </Root>
+    </Loggers>
+</Configuration>
