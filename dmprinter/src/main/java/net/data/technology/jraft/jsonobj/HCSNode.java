@@ -7,18 +7,19 @@ public class HCSNode {
     /**
      * hcs节点 Id
      */
-    public String hcsId;
+    private String hcsId;
     /**
      * 集群 hcs节点 IP
      */
-    public String ip;
+    private String ip;
     /**
      * 集群hcs 节点 Raft通讯端口
      */
-    public Integer port;
+    private Integer port;
     /**
      * 服务器状态: 0为在线可用(默认), 1为离线
      */
-    public Integer status;
+    private Integer status;
+
 }
 

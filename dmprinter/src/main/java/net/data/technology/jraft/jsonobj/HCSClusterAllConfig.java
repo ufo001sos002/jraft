@@ -1,5 +1,7 @@
 package net.data.technology.jraft.jsonobj;
 
+import java.util.List;
+
 import net.data.technology.jraft.CollectionUtil.ToSortObject;
 
 /**
@@ -11,7 +13,12 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
     /**
      * 私有配置 部分:集群各自节点运行参数
      */
-    public HCSSystemConfig systemConfig;
+    private HCSSystemConfig systemConfig;
+
+    /**
+     * 公有配置 部分：该组集群 所有节点信息
+     */
+    private List<HCSNode> hcsGroup;
 
     /**
      * 
