@@ -2,10 +2,13 @@ package net.data.technology.jraft;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 
 /**
  * <pre>
@@ -44,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
  * --公共配置(集群共享配置；包含:整个集群中节点信息、整个集群需监控的实例相关、实例集群分派规则 等等；由HCM 根据所处集群 下发，各集群节点一致) 
  * --私有配置(各集群节点私有启动相关配置；由HCM 根据集群节点分别下发，各集群节点不一致)
- * --分配配置(各节点被分配到 需要管理的实例，由Leader(或HCM_S_R)下发，各集群节点一致，但主要由Leader计算下发，尤其是程序启动(初次或重启)时)
+ * --分配配置(各节点被分配到 需要管理的实例，由Leader(或HCM_S_R)下发，各集群节点一致，但主要由Leader计算下发，尤其是程序启动(初次或重启)时 )
  * 以上构成完整配置，存在本地配置文件LOCALCONFIG中(也可以拆分多个文件，视情况调整)
  * 
  * 
@@ -106,9 +109,9 @@ public class Middleware implements StateMachine {
      */
     private static final Logger logger = LoggerFactory.getLogger(Middleware.class);
     /**
-     * UTF-8 字符集
+     * 系统默认字符集： UTF-8
      */
-    public static final Charset UTF8_FOR_JAVA = Charset.forName("UTF-8");
+    public static volatile Charset SYSTEM_CHARSET = StandardCharsets.UTF_8;// Charset.forName("UTF-8");
 
     /**
      * 中间件启动完毕 且初始化完Raft集群后 初始化此方法(类似 {@link RaftConsensus#run(RaftContext)}调用阶段) 参数
@@ -371,8 +374,23 @@ public class Middleware implements StateMachine {
 	return "61559355";
     }
 
+    /**
+     * SSL通讯线程池核心线程大小
+     * 
+     * @return
+     */
     public int getExecutorSize() {
 	return Runtime.getRuntime().availableProcessors() * 2;
+    }
+
+    /**
+     * 根据字节返回字符串
+     * 
+     * @param bytes
+     * @return
+     */
+    public static String getStringFromBytes(byte[] bytes) {
+	return new String(bytes, Middleware.SYSTEM_CHARSET);
     }
 
     /**
@@ -387,6 +405,16 @@ public class Middleware implements StateMachine {
 	this.sslClient = new NIOSSLClient(getSocketKeyPath(), getSocketKeyStorePass(), getSocketKeyPass(),
 		getSocketTrustPath(), getSocketTrustStorePass(), getExecutorSize());
 	// TODO init
+    }
+
+    /**
+     * 处理配置对象
+     * 
+     * @param hcsClusterAllConfig
+     * @return not null
+     */
+    public Tuple2<Integer, String> handleServerConfig(HCSClusterAllConfig hcsClusterAllConfig) {
+	return null;
     }
 
     /**

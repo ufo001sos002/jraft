@@ -17,7 +17,6 @@ import java.security.cert.CertificateException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -33,9 +32,7 @@ import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.alibaba.fastjson.JSON;
-
-import net.data.technology.jraft.jsonobj.SocketRequest;
+import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 
 /**
  * SSL连接客户端 保持长连
@@ -110,20 +107,6 @@ public class NIOSSLClient implements SSLClient {
      * 心跳时间
      */
     private volatile long intervalHeartBeatTime = 5000;
-    /**
-     * {@link #handleRDSInstanceAdd(SocketPacket)} 的操作锁 TODO 考虑增删中同一资源操作的互斥锁 或者handle read 队列操作
-     */
-    private ReentrantLock rdsInstanceAddByLock = new ReentrantLock();
-    /**
-     * {@link #handleServerConfig(SocketPacket)} 的操作锁
-     */
-    private ReentrantLock initServerConfigByLock = new ReentrantLock();
-    /**
-     * {@link #handleRDSInstanceEnable(SocketPacket)} 和
-     * {@link #handleRDSInstanceDisable(SocketPacket)} 的互斥操作锁<br>
-     * TODO 后期修改为 实例级操作锁一个实例一个
-     */
-    private ReentrantLock enableOrDisableRdsInstanceByLock = new ReentrantLock();
     /**
      * {@link #doHandshake()}方法中 socket 正在read时 = true
      */
@@ -986,76 +969,6 @@ public class NIOSSLClient implements SSLClient {
     public void setHeartbeatInterval(long intervalTime) {
         this.intervalHeartBeatTime = intervalTime;
     }
-    
-    private void setTaskResponseData(TaskResponse taskResponse,Object o) {
-        taskResponse.setData(o);// TODO don't send,Delete later. 调试返回JSON
-    }
-
-    /**
-     * 
-     * @return true 继续后续正常业务
-     */
-    private boolean isDebugPrint(SocketPacket socketPacket, SocketRequest returnObj,
-            TaskResponse taskResponse) {
-        boolean isDebugPrint = false;
-        if (isDebugPrint) {
-            try {
-                taskResponse.setId(returnObj.getTaskId());
-                taskResponse.setCode(0);
-                taskResponse.setMessage("OK");
-                setTaskResponseData(taskResponse, returnObj.toString());
-                socketPacket.setData(JSON.toJSONString(taskResponse)
-			.getBytes(Middleware.UTF8_FOR_JAVA));
-                if (logger.isDebugEnabled()) {
-                    logger.debug(Markers.SSLCLIENT, "isDebugPrint:" + socketPacket.getDebugValue());
-                }
-                socketPacket.writeBufferToSSLClient(this);
-            } catch (IOException e) {
-                logger.error(Markers.CONFIG, "send load config result is error:" + e.getMessage(),
-                        e);
-            }
-        }
-        return isDebugPrint;
-    }
-
-    /**
-     * 设置回包对象 返回码以及消息
-     * 
-     * @param taskResponse
-     * @param code
-     * @param msg
-     */
-    private void setTaskResponseCodeMsg(TaskResponse taskResponse, int code, String msg) {
-        taskResponse.setCode(code);
-        taskResponse.setMessage(msg);
-    }
-
-
-    private boolean checkJsonObjectIsNotNull(SocketRequest request) throws Exception {
-        if (request == null) {
-            throw new Exception("json string data to json is error");
-        }
-        if (request.getTaskId() == null) {
-            throw new Exception("SocketRequest json taskId is null");
-        }
-        return true;
-    }
-
-    /**
-     * 保存配置文件<br/>
-     * <b>注：已日志输出错误</b>
-     * 
-     * @return true 保存配置文件成功
-     */
-    private boolean saveConfigToFile() {
-	try {
-	    return Middleware.getMiddleware().saveConfigToFile();
-	} catch (IOException e) {
-	    // TODO 后期配置保存失败 后 生成异常编号 返回M
-	    logger.error(Markers.CONFIG, "save config to file is error:" + e.getMessage(), e);
-	}
-	return false;
-    }
 
     /**
      * TODO 先接口返回调试<br>
@@ -1064,6 +977,45 @@ public class NIOSSLClient implements SSLClient {
      * @param socketPacket
      */
     private void handleServerConfig(SocketPacket socketPacket) {
+	Tuple2<Integer, String> responseTuple2 = null;
+	String taskId = null;
+	if (socketPacket.data != null) {
+	    HCSClusterAllConfig hcsClusterAllConfig = null;
+	    try {
+		String configJsonStr = Middleware.getStringFromBytes(socketPacket.data);
+		hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(configJsonStr);
+		if (hcsClusterAllConfig != null) {
+		    taskId = hcsClusterAllConfig.getTaskId();
+		    if (taskId == null) {
+			taskId = MsgSign.FLAG_RDS_SERVER_CONFIG + "-" + "-1";
+		    } else {
+			responseTuple2 = Middleware.getMiddleware().handleServerConfig(hcsClusterAllConfig);
+		    }
+		}
+	    } catch (Exception e) {
+		String errorMgs = "handle json data[" + socketPacket.getDebugValue() + "] is error:" + e.getMessage();
+		responseTuple2 = new Tuple2<Integer, String>(MsgSign.ERROR_CODE_121000, errorMgs);
+		logger.error(Markers.CONFIG, errorMgs, e);
+	    }
+	}
+	if (responseTuple2 == null) {
+	    String errorMgs = "handle json data[" + socketPacket.getDebugValue() + "] is error";
+	    responseTuple2 = new Tuple2<Integer, String>(MsgSign.ERROR_CODE_121000, errorMgs);
+	    logger.error(Markers.CONFIG, errorMgs);
+	}
+	TaskResponse taskResponse = new TaskResponse();
+	taskResponse.setId(taskId);
+	taskResponse.setCode(responseTuple2._1());
+	taskResponse.setMessage(responseTuple2._2());
+	try {
+	    socketPacket.setData(taskResponse);
+	    socketPacket.writeBufferToSSLClient(this);
+	    return;
+	} catch (Exception e) {
+	    logger.error(Markers.CONFIG,
+		    "ERROR sending the result of processing json data[" + socketPacket.getDebugValue() + "]:"
+			    + e.getMessage(), e);
+	}
     }
 
     /**

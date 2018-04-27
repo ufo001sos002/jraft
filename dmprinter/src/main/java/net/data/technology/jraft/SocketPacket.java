@@ -2,10 +2,11 @@ package net.data.technology.jraft;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.alibaba.fastjson.JSON;
 
 /**
  * hotdb cloud Server 与 hotdb management 交互数据包
@@ -164,7 +165,7 @@ public class SocketPacket {
         if (logger.isDebugEnabled()) {
             logger.debug(Markers.SSLCLIENT,
                     "writeBuffer size:" + buffer.position() + " data:" + (data != null
-			    ? new String(data, Middleware.UTF8_FOR_JAVA)
+			    ? new String(data, Middleware.SYSTEM_CHARSET)
 			    : "is empty"));
         }
 		return buffer;
@@ -183,6 +184,7 @@ public class SocketPacket {
         return sslClient.write(writeBuffer());
     }
 
+
     /**
      * @param data 根据 data 设置 {@link #data}{@link #length}的值
      */
@@ -191,6 +193,16 @@ public class SocketPacket {
         if (data != null) {
             this.length = data.length;
         }
+    }
+
+    /**
+     * 根据taskResponse 对象
+     * 
+     * @param taskResponse
+     *            回包对象 not null
+     */
+    public void setData(TaskResponse taskResponse) {
+	setData(JSON.toJSONString(taskResponse).getBytes(Middleware.SYSTEM_CHARSET));
     }
 
     /**
@@ -279,7 +291,7 @@ public class SocketPacket {
         if (logger.isDebugEnabled() && flags > 0) {
             logger.debug(Markers.SSLCLIENT,
                     "writeBuffer size:" + buffer.position() + " data:" + (data != null
-			    ? new String(data, Middleware.UTF8_FOR_JAVA)
+			    ? new String(data, Middleware.SYSTEM_CHARSET)
 			    : "is empty"));
         }
         return buffer;
@@ -325,7 +337,7 @@ public class SocketPacket {
             taskResponse.setMessage(errorMsg);
 	    ByteBuffer sendBuffer = getWriteByteBuffer(MsgSign.getCurrentVersion(),
                     MsgSign.FLAG_RDS_SERVER_AUTO_SWITCH, MsgSign.TYPE_RDS_SERVER,
-		    taskResponse.toString().getBytes(Middleware.UTF8_FOR_JAVA));
+		    taskResponse.toString().getBytes(Middleware.SYSTEM_CHARSET));
             sslClient.write(sendBuffer);
         }
     }
@@ -364,13 +376,16 @@ public class SocketPacket {
         StringBuilder debugValue = new StringBuilder();
         debugValue.append("version:").append(version).append(' ').append("flags:").append(flags)
                 .append(' ').append("type:").append(type).append(' ').append("length:")
-                .append(length).append(' ').append("data:[");
-        for (int i = 0; i < data.length; i++) {
-            debugValue.append(' ').append(data[i]);
-        }
-        debugValue.append(' ').append("]--->json data: ");
-        if (data.length > 0) {
-	    debugValue.append(new String(data, Middleware.UTF8_FOR_JAVA));
+		.append(length);
+	if (data != null) {
+	    debugValue.append(' ').append("data:[");
+	    for (int i = 0; i < data.length; i++) {
+		debugValue.append(' ').append(data[i]);
+	    }
+	    debugValue.append(' ').append("]--->data to json str: ");
+	    if (data.length > 0) {
+		debugValue.append(new String(data, Middleware.SYSTEM_CHARSET));
+	    }
         }
         return debugValue.toString();
     }

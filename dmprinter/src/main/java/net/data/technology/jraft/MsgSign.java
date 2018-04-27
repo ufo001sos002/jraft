@@ -172,7 +172,7 @@ public class MsgSign {
     public static byte[] getSendDataFromSererIdBytes() {
         if (SEND_DATA_SERVER_ID_BYTES == null) {
             SEND_DATA_SERVER_ID_BYTES =
-		    new TaskResponse().toString().getBytes(Middleware.UTF8_FOR_JAVA);
+		    new TaskResponse().toString().getBytes(Middleware.SYSTEM_CHARSET);
         }
         return SEND_DATA_SERVER_ID_BYTES;
     }
