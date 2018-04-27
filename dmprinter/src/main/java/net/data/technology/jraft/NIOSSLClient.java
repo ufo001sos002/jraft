@@ -1040,12 +1040,14 @@ public class NIOSSLClient implements SSLClient {
 	    }
 	    if (MsgSign.TYPE_RDS_SERVER == socketPacket.type) {
 		switch (socketPacket.flags) {
-		case MsgSign.FLAG_RDS_SERVER_CONFIG:
+		case MsgSign.FLAG_RDS_SERVER_CONFIG: {
 		    handleServerConfig(socketPacket);
 		    break;
-		default:// TODO RDS MySQL 实例变更
+		}
+		default: {// TODO RDS MySQL 实例变更
 		    logger.error(Markers.SSLCLIENT, "socket request flags is error:" + socketPacket.flags);
 		    break;
+		}
 		}
 	    } else {
 		logger.error(Markers.SSLCLIENT, "socket request type is error:" + socketPacket.type);

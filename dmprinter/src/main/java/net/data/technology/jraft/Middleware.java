@@ -42,10 +42,12 @@ import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
  * 、任务结果taskId回包要么Leader 要么节点 以HCM_S_S 回复告知
  * 、TODO 需要考虑节点初次连接不上HCM，如本地配置有，走了本地配置时，后面连上HCM之后，是否拿最新配置?
  * （如果拿的话，就需要考虑比对配置是否一致 主要判断 公有配置、私有配置 是否一致，是否方便变更，分配配置 由Leader 计算下发） 
+ * 集群配置 仅 初次启动时 通过 HCM_S_S 拿一次，后续通过HCM_S_R同步、私有配置每次启动均通过HCM_S_S 拿变更
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
- * --公共配置(集群共享配置；包含:整个集群中节点信息、整个集群需监控的实例相关、实例集群分派规则 等等；由HCM 根据所处集群 下发，各集群节点一致) 
+ * --集群配置(整个集群节点信息；由HCM 根据所处集群 下发，仅集群节点第一次启动时 状态机判断是否有集群信息，没有则问HCM要，连上集群后由Leader的集群信息覆盖，后续均走本地快照 并由集群同步至最新 ，)
+ * --公共配置(集群共享配置；包含:整个集群中节点信息(除集群配置中 之外的配置信息)、整个集群需监控的实例相关、实例集群分派规则 等等；由Leader(或HCM_S_R)下发，各集群节点一致) 
  * --私有配置(各集群节点私有启动相关配置；由HCM 根据集群节点分别下发，各集群节点不一致)
  * --分配配置(各节点被分配到 需要管理的实例，由Leader(或HCM_S_R)下发，各集群节点一致，但主要由Leader计算下发，尤其是程序启动(初次或重启)时 )
  * 以上构成完整配置，存在本地配置文件LOCALCONFIG中(也可以拆分多个文件，视情况调整)
@@ -414,6 +416,7 @@ public class Middleware implements StateMachine {
      * @return not null
      */
     public Tuple2<Integer, String> handleServerConfig(HCSClusterAllConfig hcsClusterAllConfig) {
+	// 初始化集群
 	return null;
     }
 
