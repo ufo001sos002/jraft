@@ -134,7 +134,7 @@ public class PeerServer {
      * 
      * @return 返回 {@link ClusterServer#getId()} 的值
      */
-    public int getId(){
+    public String getId() {
         return this.clusterConfig.getId();
     }
 

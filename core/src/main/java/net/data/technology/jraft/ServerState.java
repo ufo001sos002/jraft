@@ -34,7 +34,7 @@ public class ServerState {
      * 投票 给谁 (当为 {@link ServerRole#Candidate} 时 为-1) ，后续发起
      * {@link RaftServer#requestVote()} 时置为 {@link RaftServer#id}
      */
-    private int votedFor;
+    private String votedFor;
 
     /**
      * @return 返回 {@link #term}值
@@ -54,7 +54,7 @@ public class ServerState {
     /**
      * @return 返回 {@link #votedFor}值
      */
-    public int getVotedFor() {
+    public String getVotedFor() {
 	return votedFor;
     }
 
@@ -62,7 +62,7 @@ public class ServerState {
      * @param 用参数votedFor设置
      *            {@link #votedFor}
      */
-    public void setVotedFor(int votedFor) {
+    public void setVotedFor(String votedFor) {
 	this.votedFor = votedFor;
     }
 

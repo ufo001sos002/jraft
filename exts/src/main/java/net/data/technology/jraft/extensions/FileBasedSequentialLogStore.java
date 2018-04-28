@@ -136,24 +136,18 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
 
     /**
      * 
-     * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象<br>
-     * 复用 {@link #FileBasedSequentialLogStore(String, int)} 构造方法, int 默认为 {@link #BUFFER_SIZE} 的值
-     * @param logContainer 数据记录目录
-     */
-    public FileBasedSequentialLogStore(String logContainer){
-        this(logContainer, BUFFER_SIZE);
-    }
-    /**
-     * 
      * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象
-     * @param logContainer 数据记录文件目录
-     * @param bufferSize 数据记录buffer大小
+     * 
+     * @param logContainer
+     *            数据记录文件目录
+     * @param bufferSize
+     *            数据记录buffer大小
      */
-    public FileBasedSequentialLogStore(String logContainer, int bufferSize){
-        this.storeLock = new ReentrantReadWriteLock();// 构造存储 读写锁
+    public FileBasedSequentialLogStore(Path logContainer, int bufferSize) {
+	this.storeLock = new ReentrantReadWriteLock();// 构造存储 读写锁
         this.storeReadLock = this.storeLock.readLock(); // 获取 存储 读锁
         this.storeWriteLock = this.storeLock.writeLock(); // 获取存储 写锁
-        this.logContainer = Paths.get(logContainer); // 构架数据记录存储目录
+	this.logContainer = logContainer; // 构架数据记录存储目录
         this.bufferSize = bufferSize;
         this.logger = LogManager.getLogger(getClass());
         try{
@@ -177,6 +171,42 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
         }catch(IOException exception){
             this.logger.error("failed to access log store", exception);
         }
+    }
+
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象
+     * @param logContainer 数据记录文件目录
+     * @param bufferSize 数据记录buffer大小
+     */
+    public FileBasedSequentialLogStore(String logContainer, int bufferSize){
+	this(Paths.get(logContainer), bufferSize);
+    }
+
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象<br>
+     * 复用 {@link #FileBasedSequentialLogStore(String, int)} 构造方法, int 默认为
+     * {@link #BUFFER_SIZE} 的值
+     * 
+     * @param logContainer
+     *            数据记录目录
+     */
+    public FileBasedSequentialLogStore(Path logContainer) {
+	this(logContainer, BUFFER_SIZE);
+    }
+
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedSequentialLogStore} 对象<br>
+     * 复用 {@link #FileBasedSequentialLogStore(String, int)} 构造方法, int 默认为
+     * {@link #BUFFER_SIZE} 的值
+     * 
+     * @param logContainer
+     *            数据记录目录
+     */
+    public FileBasedSequentialLogStore(String logContainer) {
+	this(logContainer, BUFFER_SIZE);
     }
 
     @Override

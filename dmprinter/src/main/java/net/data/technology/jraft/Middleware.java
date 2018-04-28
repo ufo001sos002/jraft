@@ -1,13 +1,18 @@
 package net.data.technology.jraft;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.data.technology.jraft.extensions.FileBasedServerStateManager;
 import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 
 /**
@@ -42,7 +47,7 @@ import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
  * 、任务结果taskId回包要么Leader 要么节点 以HCM_S_S 回复告知
  * 、TODO 需要考虑节点初次连接不上HCM，如本地配置有，走了本地配置时，后面连上HCM之后，是否拿最新配置?
  * （如果拿的话，就需要考虑比对配置是否一致 主要判断 公有配置、私有配置 是否一致，是否方便变更，分配配置 由Leader 计算下发） 
- * 集群配置 仅 初次启动时 通过 HCM_S_S 拿一次，后续通过HCM_S_R同步、私有配置每次启动均通过HCM_S_S 拿变更
+ * 集群配置 仅 初次启动时 通过 HCM_S_S 应用一次(判断文件是否存在)，后续通过HCM_S_R同步、私有配置每次启动均通过HCM_S_S 拿变更
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
@@ -410,6 +415,54 @@ public class Middleware implements StateMachine {
     }
 
     /**
+     * 程序根路径 属性名
+     */
+    public static final String SYS_HOME = "HOTDB_HOME";
+    /**
+     * 配置文件 文件夹名
+     */
+    public static final String CONFIG_FOLDER_NAME = "conf";
+    /**
+     * 集群配置文件夹名( {@ #CONFIG_FOLDER_NAME} 文件夹下)
+     */
+    public static final String CLUSTER_FOLDER_NAME = "cluster";
+    /**
+     * 集群配置文件目录对象(由 {@link #SYS_HOME}{@link #CONFIG_FOLDER_NAME}
+     * {@link #CLUSTER_FOLDER_NAME}) 组合
+     */
+    public static volatile Path clusterDirectoryPath = null;
+
+    /**
+     * 
+     * @return 程序根路径
+     */
+    public static String getHomePath() {
+	String home = System.getProperty(SYS_HOME);
+	if (home != null) {
+	    if (home.endsWith(File.pathSeparator)) {
+		home = home.substring(0, home.length() - 1);
+		System.setProperty(SYS_HOME, home);
+	    }
+	}
+	return home;
+    }
+
+    /**
+     * 
+     * @return 集群配置文件目录对象(not null)
+     */
+    public static Path getClusterDirectoryPath() {
+	if(clusterDirectoryPath == null) {
+	    synchronized (CLUSTER_FOLDER_NAME) {
+		if(clusterDirectoryPath == null) {
+		    clusterDirectoryPath = Paths.get(SYS_HOME).resolve(CONFIG_FOLDER_NAME).resolve(CLUSTER_FOLDER_NAME);
+		}
+	    }
+	}
+	return clusterDirectoryPath;
+    }
+
+    /**
      * 处理配置对象
      * 
      * @param hcsClusterAllConfig
@@ -417,6 +470,14 @@ public class Middleware implements StateMachine {
      */
     public Tuple2<Integer, String> handleServerConfig(HCSClusterAllConfig hcsClusterAllConfig) {
 	// 初始化集群
+	ServerStateManager stateManager = new FileBasedServerStateManager(getClusterDirectoryPath());
+	ClusterConfiguration config = null;
+	if (stateManager.existsClusterConfiguration()) { // 本地存在配置
+	    config = stateManager.loadClusterConfiguration();
+	} else { // 初次启动本地无配置
+
+	}
+//	URI localEndpoint = new URI(config.getServer(stateManager.getServerId()).getEndpoint());
 	return null;
     }
 

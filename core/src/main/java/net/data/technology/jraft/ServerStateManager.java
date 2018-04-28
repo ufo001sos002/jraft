@@ -31,6 +31,13 @@ public interface ServerStateManager {
     public ClusterConfiguration loadClusterConfiguration();
 
     /**
+     * 判断当前是否存在服务端集群配置
+     * 
+     * @return true 存在 false不存在
+     */
+    public boolean existsClusterConfiguration();
+
+    /**
      * Save the cluster configuration <br>
      * 保存集群服务端 配置
      * 
@@ -69,5 +76,5 @@ public interface ServerStateManager {
      * 
      * @return server id for this server
      */
-    public int getServerId();
+    public String getServerId();
 }

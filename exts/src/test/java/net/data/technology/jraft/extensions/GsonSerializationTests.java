@@ -17,7 +17,8 @@
 
 package net.data.technology.jraft.extensions;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Calendar;
 import java.util.Random;
@@ -41,8 +42,8 @@ public class GsonSerializationTests {
         RaftResponseMessage response = new RaftResponseMessage();
         response.setMessageType(this.randomMessageType());
         response.setAccepted(this.random.nextBoolean());
-        response.setDestination(this.random.nextInt());
-        response.setSource(this.random.nextInt());
+	response.setDestination("" + this.random.nextInt());
+	response.setSource("" + this.random.nextInt());
         response.setTerm(this.random.nextLong());
         response.setNextIndex(this.random.nextLong());
 
@@ -62,10 +63,10 @@ public class GsonSerializationTests {
         RaftRequestMessage request = new RaftRequestMessage();
         request.setMessageType(this.randomMessageType());;
         request.setCommitIndex(this.random.nextLong());
-        request.setDestination(this.random.nextInt());
+	request.setDestination("" + this.random.nextInt());
         request.setLastLogIndex(this.random.nextLong());
         request.setLastLogTerm(this.random.nextLong());
-        request.setSource(this.random.nextInt());
+	request.setSource("" + this.random.nextInt());
         request.setTerm(this.random.nextLong());
         LogEntry[] entries = new LogEntry[this.random.nextInt(20) + 1];
         for(int i = 0; i < entries.length; ++i){

@@ -20,69 +20,81 @@ package net.data.technology.jraft;
  * Raft消息对象
  */
 public class RaftMessage {
-	/**
-	 * Raft消息类型
-	 */
+    /**
+     * Raft消息类型
+     */
     private RaftMessageType messageType;
     /**
      * 来源
      */
-    private int source;
+    private String source;
     /**
      * 目的地
      */
-    private int destination;
+    private String destination;
     /**
      * 任期
      */
     private long term;
-	/**
-	 * @return 返回 {@link #messageType}值
-	 */
-	public RaftMessageType getMessageType() {
-		return messageType;
-	}
-	/**
-	 * @param 用参数messageType设置 {@link #messageType}
-	 */
-	public void setMessageType(RaftMessageType messageType) {
-		this.messageType = messageType;
-	}
-	/**
-	 * @return 返回 {@link #source}值
-	 */
-	public int getSource() {
-		return source;
-	}
-	/**
-	 * @param 用参数source设置 {@link #source}
-	 */
-	public void setSource(int source) {
-		this.source = source;
-	}
-	/**
-	 * @return 返回 {@link #destination}值
-	 */
-	public int getDestination() {
-		return destination;
-	}
-	/**
-	 * @param 用参数destination设置 {@link #destination}
-	 */
-	public void setDestination(int destination) {
-		this.destination = destination;
-	}
-	/**
-	 * @return 返回 {@link #term}值
-	 */
-	public long getTerm() {
-		return term;
-	}
-	/**
-	 * @param 用参数term设置 {@link #term}
-	 */
-	public void setTerm(long term) {
-		this.term = term;
-	}
+
+    /**
+     * @return 返回 {@link #messageType}值
+     */
+    public RaftMessageType getMessageType() {
+	return messageType;
+    }
+
+    /**
+     * @param 用参数messageType设置
+     *            {@link #messageType}
+     */
+    public void setMessageType(RaftMessageType messageType) {
+	this.messageType = messageType;
+    }
+
+    /**
+     * @return 返回 {@link #source}值
+     */
+    public String getSource() {
+	return source;
+    }
+
+    /**
+     * @param 用参数source设置
+     *            {@link #source}
+     */
+    public void setSource(String source) {
+	this.source = source;
+    }
+
+    /**
+     * @return 返回 {@link #destination}值
+     */
+    public String getDestination() {
+	return destination;
+    }
+
+    /**
+     * @param 用参数destination设置
+     *            {@link #destination}
+     */
+    public void setDestination(String destination) {
+	this.destination = destination;
+    }
+
+    /**
+     * @return 返回 {@link #term}值
+     */
+    public long getTerm() {
+	return term;
+    }
+
+    /**
+     * @param 用参数term设置
+     *            {@link #term}
+     */
+    public void setTerm(long term) {
+	this.term = term;
+    }
 
 }

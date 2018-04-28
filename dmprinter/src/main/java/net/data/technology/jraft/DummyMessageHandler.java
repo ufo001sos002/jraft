@@ -30,7 +30,7 @@ public class DummyMessageHandler implements RaftMessageHandler {
     @Override
     public RaftResponseMessage processRequest(RaftRequestMessage request) {
         String log = String.format(
-                "Receive a request(Source: %d, Destination: %d, Term: %d, LLI: %d, LLT: %d, CI: %d, LEL: %d",
+		"Receive a request(Source: %s, Destination: %s, Term: %d, LLI: %d, LLT: %d, CI: %d, LEL: %d",
                 request.getSource(),
                 request.getDestination(),
                 request.getTerm(),
@@ -48,12 +48,12 @@ public class DummyMessageHandler implements RaftMessageHandler {
         return RaftMessageType.fromByte((byte) (value + 1));
     }
 
-    private RaftResponseMessage randomResponse(int source, long term){
+    private RaftResponseMessage randomResponse(String source, long term) {
         RaftResponseMessage response = new RaftResponseMessage();
         response.setMessageType(this.randomMessageType());
         response.setAccepted(this.random.nextBoolean());
         response.setDestination(source);
-        response.setSource(this.random.nextInt());
+	response.setSource("" + this.random.nextInt());
         response.setTerm(term);
         response.setNextIndex(this.random.nextLong());
         return response;

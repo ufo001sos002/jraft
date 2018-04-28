@@ -20,6 +20,7 @@ package net.data.technology.jraft.extensions;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -100,15 +101,42 @@ public class BinaryUtils {
     }
     
     /**
+     * 将参数转为{@link Long#BYTES} 8 个字节长度字节数组
+     * 
+     * @param value
+     * @return
+     */
+    public static byte[] stringToBytes(String value) {
+	return value.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 冲
+     * 
+     * @param buffer
+     * @return
+     */
+    public static String bufferGetString(ByteBuffer buffer) {
+	byte[] data = new byte[buffer.getInt()];
+	buffer.get(data);
+	return new String(data, StandardCharsets.UTF_8);
+    }
+
+    /**
      * 将Raft回包对象写入字节数组中
+     * 
      * @param response
      * @return
      */
     public static byte[] messageToBytes(RaftResponseMessage response){
-        ByteBuffer buffer = ByteBuffer.allocate(RAFT_RESPONSE_HEADER_SIZE);
+	byte[] source = stringToBytes(response.getSource());
+	byte[] destination = stringToBytes(response.getDestination());
+	ByteBuffer buffer = ByteBuffer.allocate(RAFT_RESPONSE_HEADER_SIZE + source.length + destination.length);
         buffer.put(response.getMessageType().toByte()); // 1
-        buffer.put(intToBytes(response.getSource())); // 4
-        buffer.put(intToBytes(response.getDestination()));// 4
+	buffer.put(intToBytes(source.length)); // 4
+	buffer.put(source);
+	buffer.put(intToBytes(destination.length)); // 4
+	buffer.put(destination);
         buffer.put(longToBytes(response.getTerm())); // 8
         buffer.put(longToBytes(response.getNextIndex())); // 8
         buffer.put(booleanToByte(response.isAccepted())); // 1
@@ -120,15 +148,15 @@ public class BinaryUtils {
      * @return
      */
     public static RaftResponseMessage bytesToResponseMessage(byte[] data){
-        if(data == null || data.length != RAFT_RESPONSE_HEADER_SIZE){
-            throw new IllegalArgumentException(String.format("data must have %d bytes for a raft response message", RAFT_RESPONSE_HEADER_SIZE));
-        }
-
+	if (data == null || data.length <= RAFT_RESPONSE_HEADER_SIZE) {
+	    throw new IllegalArgumentException(
+		    String.format("data must have %d bytes for a raft response message", RAFT_RESPONSE_HEADER_SIZE));
+	}
         ByteBuffer buffer = ByteBuffer.wrap(data);
         RaftResponseMessage response = new RaftResponseMessage();
         response.setMessageType(RaftMessageType.fromByte(buffer.get()));
-        response.setSource(buffer.getInt());
-        response.setDestination(buffer.getInt());
+	response.setSource(bufferGetString(buffer));
+	response.setDestination(bufferGetString(buffer));
         response.setTerm(buffer.getLong());
         response.setNextIndex(buffer.getLong());
         response.setAccepted(buffer.get() == 1);
@@ -152,11 +180,15 @@ public class BinaryUtils {
                 buffersForLogs.add(logData);
             }
         }
-
-        ByteBuffer requestBuffer = ByteBuffer.allocate(RAFT_REQUEST_HEADER_SIZE + logSize);
+	byte[] source = stringToBytes(request.getSource());
+	byte[] destination = stringToBytes(request.getDestination());
+	ByteBuffer requestBuffer = ByteBuffer
+		.allocate(RAFT_REQUEST_HEADER_SIZE + source.length + destination.length + logSize);
         requestBuffer.put(request.getMessageType().toByte());
-        requestBuffer.put(intToBytes(request.getSource()));
-        requestBuffer.put(intToBytes(request.getDestination()));
+	requestBuffer.put(intToBytes(source.length)); // 4
+	requestBuffer.put(source);
+	requestBuffer.put(intToBytes(destination.length)); // 4
+	requestBuffer.put(destination);
         requestBuffer.put(longToBytes(request.getTerm()));
         requestBuffer.put(longToBytes(request.getLastLogTerm()));
         requestBuffer.put(longToBytes(request.getLastLogIndex()));
@@ -179,15 +211,15 @@ public class BinaryUtils {
      * @throws IllegalArgumentException data为null 或 长度不满足 {@link #RAFT_REQUEST_HEADER_SIZE} (Raft消息请求头长度)
      */
     public static Pair<RaftRequestMessage, Integer> bytesToRequestMessage(byte[] data){
-        if(data == null || data.length != RAFT_REQUEST_HEADER_SIZE){
+	if (data == null || data.length <= RAFT_REQUEST_HEADER_SIZE) {
             throw new IllegalArgumentException("invalid request message header.");
         }
 
         ByteBuffer buffer = ByteBuffer.wrap(data);
         RaftRequestMessage request = new RaftRequestMessage();
         request.setMessageType(RaftMessageType.fromByte(buffer.get()));
-        request.setSource(buffer.getInt());
-        request.setDestination(buffer.getInt());
+	request.setSource(bufferGetString(buffer));
+	request.setDestination(bufferGetString(buffer));
         request.setTerm(buffer.getLong());
         request.setLastLogTerm(buffer.getLong());
         request.setLastLogIndex(buffer.getLong());

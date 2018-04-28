@@ -17,7 +17,7 @@
 
 package net.data.technology.jraft.tests;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Calendar;
 import java.util.Random;
@@ -38,8 +38,8 @@ public class ClusterConfigurationTests {
         int servers = random.nextInt(10) + 1;
         for(int i = 0; i < servers; ++i){
             ClusterServer server = new ClusterServer();
-            server.setId(random.nextInt());
-            server.setEndpoint(String.format("Server %d", (i + 1)));
+	    server.setId("" + random.nextInt());
+	    server.setEndpoint(String.format("Server %s", (i + 1)));
             config.getServers().add(server);
         }
 

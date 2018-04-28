@@ -474,7 +474,7 @@ public class MessagePrinter implements StateMachine {
             if(values.size() == 2){
                 ClusterServer server = new ClusterServer();
                 server.setEndpoint(values.get(1));
-                server.setId(Integer.parseInt(values.get(0)));
+		server.setId(values.get(0));
                 messageSender.addServer(server).whenCompleteAsync((Boolean result, Throwable err) -> {
                     if(err != null){
                         future.complete("System faulted, please retry");

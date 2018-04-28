@@ -29,19 +29,19 @@ import java.util.List;
  * 
  * <pre>
 {
-    "logIndex": 1,
+    "logIndex": 0,
     "lastLogIndex": 0,
     "servers": [
         {
-            "id": 1,
+            "id": "1",
             "endpoint": "tcp://localhost:9001"
         },
         {
-            "id": 2,
+            "id": "2",
             "endpoint": "tcp://localhost:9002"
         },
         {
-            "id": 3,
+            "id": "3",
             "endpoint": "tcp://localhost:9003"
         }
     ]
@@ -151,9 +151,9 @@ public class ClusterConfiguration {
      * @return a cluster server configuration or null if id is not found<br>
      *         返回id对应集群Server配置对象, id未对应时返回null
      */
-    public ClusterServer getServer(int id){
+    public ClusterServer getServer(String id) {
         for(ClusterServer server : this.servers){
-            if(server.getId() == id){
+	    if (server.getId().equals(id)) {
                 return server;
             }
         }

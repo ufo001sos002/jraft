@@ -73,25 +73,24 @@ public class FileBasedServerStateManager implements ServerStateManager {
      */
     private Path container;
     /**
-     * 服务端ID 从{@link #STATE_FILE} 获取 
+     * 服务端ID 从{@link #CONFIG_FILE} 获取
      */
-    private int serverId;
+    private String serverId;
     /**
      * 
      * 根据参数构造 类{@link FileBasedServerStateManager} 对象
      * @param dataDirectory 文件目录
      */
-    public FileBasedServerStateManager(String dataDirectory){
+    public FileBasedServerStateManager(Path dataDirectory) {
         this.logStore = new FileBasedSequentialLogStore(dataDirectory);// 构造数据记录 存储对象
-        this.container = Paths.get(dataDirectory);
+	this.container = dataDirectory;
         this.logger = LogManager.getLogger(getClass());
         try{
             Properties props = new Properties();
             FileInputStream configInput = new FileInputStream(this.container.resolve(CONFIG_FILE).toString());
             props.load(configInput);
             String serverIdValue = props.getProperty("server.id");
-	    this.serverId = serverIdValue == null || serverIdValue.length() == 0 ? -1
-		    : Integer.parseInt(serverIdValue.trim()); // 读取当前集群服务端程序ID
+	    this.serverId = serverIdValue == null || serverIdValue.length() == 0 ? "-1" : serverIdValue.trim(); // 读取当前集群服务端程序ID
             configInput.close();
             this.serverStateFile = new RandomAccessFile(this.container.resolve(STATE_FILE).toString(), "rw");
 	    this.serverStateFile.seek(0);// 打开并定位 服务器状态文件 写入位置
@@ -99,6 +98,17 @@ public class FileBasedServerStateManager implements ServerStateManager {
             this.logger.error("failed to create/open server state file", exception);
             throw new IllegalArgumentException("cannot create/open the state file", exception);
         }
+    }
+
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedServerStateManager} 对象
+     * 
+     * @param dataDirectory
+     *            文件目录
+     */
+    public FileBasedServerStateManager(String dataDirectory) {
+	this(Paths.get(dataDirectory));
     }
 
     @Override
@@ -139,17 +149,20 @@ public class FileBasedServerStateManager implements ServerStateManager {
         }
     }
 
-    public int getServerId(){
+    @Override
+    public String getServerId() {
         return this.serverId;
     }
 
     @Override
     public synchronized void persistState(ServerState serverState) {
         try{
-            ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES * 2 + Integer.BYTES);
+	    byte[] votedFor = BinaryUtils.stringToBytes(serverState.getVotedFor());
+	    ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES * 2 + Integer.BYTES + votedFor.length);
             buffer.putLong(serverState.getTerm());
             buffer.putLong(serverState.getCommitIndex());
-            buffer.putInt(serverState.getVotedFor());
+	    buffer.put(BinaryUtils.intToBytes(votedFor.length)); // 4
+	    buffer.put(votedFor);
             this.serverStateFile.write(buffer.array());
             this.serverStateFile.seek(0);
         }catch(IOException ioError){
@@ -172,7 +185,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
             ServerState state = new ServerState();
             state.setTerm(buffer.getLong());
             state.setCommitIndex(buffer.getLong());
-            state.setVotedFor(buffer.getInt());
+	    state.setVotedFor(BinaryUtils.bufferGetString(buffer));
             return state;
         }catch(IOException ioError){
             this.logger.error("failed to read from the server state file", ioError);
@@ -224,6 +237,16 @@ public class FileBasedServerStateManager implements ServerStateManager {
     public String toString() {
         return "FileBasedServerStateManager [serverId=" + serverId + ", serverStateFile="
                 + serverStateFile + ", logStore=" + logStore + ", container=" + container + "]";
+    }
+
+    /**
+     * 
+     * @return
+     * @see net.data.technology.jraft.ServerStateManager#existsClusterConfiguration()
+     */
+    @Override
+    public boolean existsClusterConfiguration() {
+	return Files.exists(this.container.resolve(CLUSTER_CONFIG_FILE));
     }
 
 }

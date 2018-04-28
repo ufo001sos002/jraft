@@ -130,7 +130,7 @@ public class App
                 if(values.size() == 3){ // 增加服务器
                     ClusterServer server = new ClusterServer();
                     server.setEndpoint(values.get(2));
-                    server.setId(Integer.parseInt(values.get(1)));
+		    server.setId(values.get(1));
                     boolean accepted = client.addServer(server).get();
                     System.out.println("Accepted: " + String.valueOf(accepted));
                     continue;
@@ -178,7 +178,7 @@ public class App
             while(true){
                 for(int i = 0; i < batchSize;  ++i){
                     RaftRequestMessage request = randomRequest();
-                    request.setSource(i);
+		    request.setSource("" + i);
                     CompletableFuture<RaftResponseMessage> response = client.send(request);
                     list.add(new Pair<RaftRequestMessage, CompletableFuture<RaftResponseMessage>>(request, response));
                 }
@@ -190,7 +190,7 @@ public class App
                     RaftResponseMessage response = item.item2.get();
 
                     System.out.println(String.format(
-                            "Response %d: Accepted: %s, Src: %d, Dest: %d, MT: %s, NI: %d, T: %d",
+			    "Response %d: Accepted: %s, Src: %s, Dest: %s, MT: %s, NI: %d, T: %d",
                                 i,
                                 String.valueOf(response.isAccepted()),
                                 response.getSource(),
@@ -223,10 +223,10 @@ public class App
         RaftRequestMessage request = new RaftRequestMessage();
         request.setMessageType(randomMessageType());;
         request.setCommitIndex(random.nextLong());
-        request.setDestination(random.nextInt());
+	request.setDestination("" + random.nextInt());
         request.setLastLogIndex(random.nextLong());
         request.setLastLogTerm(random.nextLong());
-        request.setSource(random.nextInt());
+	request.setSource("" + random.nextInt());
         request.setTerm(random.nextLong());
         LogEntry[] entries = new LogEntry[random.nextInt(20) + 1];
         for(int i = 0; i < entries.length; ++i){

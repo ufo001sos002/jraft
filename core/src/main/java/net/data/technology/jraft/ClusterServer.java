@@ -28,7 +28,7 @@ import java.nio.charset.StandardCharsets;
  * <pre>
  * {
 
-    "id":3,
+    "id":"3",
     "endpoint":"tcp://localhost:9003"
 
  * }
@@ -41,15 +41,37 @@ public class ClusterServer {
     /**
      * 集群Sever ID(唯一)
      */
-    private int id;
+    private String id;
     /**
      * 集群Server 终端字符串 格式：tcp://localhost:9003
      */
     private String endpoint;
 
-    public ClusterServer(){
-        this.id = -1;
-        this.endpoint = null;
+    /**
+     * 
+     * <p>
+     * Description: 构造成员变量均为null {@link ClusterServer} 对象
+     * </p>
+     */
+    public ClusterServer() {
+    }
+
+    /**
+     * 
+     * <p>
+     * Description: 根据参数构造 {@link ClusterServer} 对象
+     * </p>
+     * 
+     * @param id
+     *            集群节点id
+     * @param ip
+     *            集群节点Raft通讯(RPC) ip
+     * @param port
+     *            集群节点Raft通讯(RPC) port
+     */
+    public ClusterServer(String id, String ip, int port) {
+	this.id = id;
+	this.endpoint = "tcp://" + ip + ":" + port;
     }
 
     /**
@@ -58,27 +80,31 @@ public class ClusterServer {
      * Description: 从参数中 获取集群Server对象
      * </p>
      * 
-     * @param buffer 数组[格式：id|length|data]
+     * @param buffer
+     *            数组[格式：length|id|length|data]
      */
     public ClusterServer(ByteBuffer buffer){
-        this.id = buffer.getInt();
-        int dataSize = buffer.getInt();
-        byte[] endpointData = new byte[dataSize];
-        buffer.get(endpointData);
-        this.endpoint = new String(endpointData, StandardCharsets.UTF_8);
+	int dataSize = buffer.getInt();
+	byte[] data = new byte[dataSize];
+	buffer.get(data);
+	this.id = new String(data, StandardCharsets.UTF_8);
+	dataSize = buffer.getInt();
+	data = new byte[dataSize];
+	buffer.get(data);
+	this.endpoint = new String(data, StandardCharsets.UTF_8);
     }
 
     /**
      * @return {@link #id} 的值
      */
-    public int getId() {
+    public String getId() {
         return id;
     }
 
     /**
      * @param id 根据 id 设置 {@link #id}的值
      */
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -103,9 +129,11 @@ public class ClusterServer {
      * @return the binary data that represents the server configuration 服务器配置字节数组形式
      */
     public byte[] toBytes(){
+	byte[] idData = this.id.getBytes(StandardCharsets.UTF_8);
         byte[] endpointData = this.endpoint.getBytes(StandardCharsets.UTF_8);
-        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES * 2 + endpointData.length);
-        buffer.putInt(this.id);
+	ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES * 2 + idData.length + endpointData.length);
+	buffer.putInt(idData.length);
+	buffer.put(idData);
         buffer.putInt(endpointData.length);
         buffer.put(endpointData);
         return buffer.array();

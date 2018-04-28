@@ -120,7 +120,7 @@ public class RpcTcpClient implements RpcClient {
     @Override
     public synchronized CompletableFuture<RaftResponseMessage> send(final RaftRequestMessage request) {
 	if (logger.isDebugEnabled()) {
-	    logger.debug(String.format("trying to send message %s to server %d at endpoint %s",
+	    logger.debug(String.format("trying to send message %s to server %s at endpoint %s",
 		    request.getMessageType().toString(), request.getDestination(), this.remote.toString()));
 	}
         CompletableFuture<RaftResponseMessage> result = new CompletableFuture<RaftResponseMessage>();

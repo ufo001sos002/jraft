@@ -33,7 +33,7 @@ public class RaftClient {
     /**
      * K: serverId V: 对应RPC客户端对象
      */
-    private Map<Integer, RpcClient> rpcClients = new HashMap<Integer, RpcClient>();
+    private Map<String, RpcClient> rpcClients = new HashMap<String, RpcClient>();
     /**
      * RPC客户端工厂
      */
@@ -50,7 +50,7 @@ public class RaftClient {
     /**
      * 当前leader ID (初始化时为随机)
      */
-    private int leaderId;
+    private String leaderId;
     /**
      * 当前处于 随机 leader时候 后续根据返回的leader 进行对leader再次发送消息<br>
      * true 表示 当前为随机leader(初始值为true)
@@ -155,10 +155,10 @@ public class RaftClient {
      * @param retry 当前重试次数
      */
     private void tryCurrentLeader(RaftRequestMessage request, CompletableFuture<Boolean> future, int rpcBackoff, int retry){
-        logger.debug("trying request to %d as current leader", this.leaderId);
+        logger.debug("trying request to %s as current leader", this.leaderId);
         getOrCreateRpcClient().send(request).whenCompleteAsync((RaftResponseMessage response, Throwable error) -> {
             if(error == null){
-                logger.debug("response from remote server, leader: %d, accepted: %s", response.getDestination(), String.valueOf(response.isAccepted()));
+                logger.debug("response from remote server, leader: %s, accepted: %s", response.getDestination(), String.valueOf(response.isAccepted()));
                 if(response.isAccepted()){ // 判断发送日志是否被leader接受
                     future.complete(true); //接受
                 }else{ // 未接受
@@ -230,7 +230,7 @@ public class RaftClient {
             }
         }
 
-        logger.info("no endpoint could be found for leader %d, that usually means no leader is elected, retry the first one", this.leaderId);
+        logger.info("no endpoint could be found for leader %s, that usually means no leader is elected, retry the first one", this.leaderId);
         this.randomLeader = true;
         this.leaderId = this.configuration.getServers().get(0).getId();
         return this.configuration.getServers().get(0).getEndpoint();
