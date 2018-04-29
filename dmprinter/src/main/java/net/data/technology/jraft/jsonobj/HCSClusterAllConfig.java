@@ -1,10 +1,18 @@
 package net.data.technology.jraft.jsonobj;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.parser.Feature;
+import com.alibaba.fastjson.util.IOUtils;
 
 import net.data.technology.jraft.CollectionUtil.ToSortObject;
+import net.data.technology.jraft.Middleware;
 
 /**
  * 集群所有配置JSON类
@@ -120,8 +128,66 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
 
     }
 
+    @Override
+    public String toString() {
+	return JSON.toJSONString(this);
+    }
+
+    /**
+     * 根据JSON字符串生成对象
+     * 
+     * @param jsonStr
+     *            JSON字符串
+     * @return {@link HCSClusterAllConfig} 对象
+     */
     public static HCSClusterAllConfig loadObjectFromJSONString(String jsonStr) {
 	return JSON.parseObject(jsonStr, HCSClusterAllConfig.class);
+    }
+
+    /**
+     * 将对象值以json形式写入文件
+     * 
+     * @param fileName
+     * @throws IOException
+     */
+    public void writeToFile(String fileName) throws IOException {
+	File folder = new File(Middleware.getHomePath(), "conf" + File.separator);
+	if (!folder.exists()) {
+	    folder.mkdirs();
+	}
+	File file = new File(Middleware.getHomePath(), "conf" + File.separator + fileName);
+	if (!file.exists()) {
+	    file.createNewFile();
+	}
+	FileOutputStream fileOutputStream = new FileOutputStream(file);
+	fileOutputStream.write(toString().getBytes(IOUtils.UTF8));
+	fileOutputStream.flush();
+	fileOutputStream.close();
+    }
+
+    /**
+     * 从指定文件名对应文件中提取 {@link HCSClusterAllConfig} 对象
+     * 
+     * @param fileName
+     *            指定文件名
+     * @return {@link HCSClusterAllConfig} 对象
+     * @throws IOException
+     */
+    public static HCSClusterAllConfig loadFromFile(String fileName) throws IOException {
+	File folder = new File(Middleware.getHomePath(), "conf" + File.separator);
+	if (!folder.exists()) {
+	    folder.mkdirs();
+	    return null;
+	}
+	File file = new File(Middleware.getHomePath(), "conf" + File.separator + fileName);
+	if (!file.exists()) {
+	    file.createNewFile();
+	    return null;
+	}
+	InputStream in = new FileInputStream(file);
+	HCSClusterAllConfig obj = JSON.parseObject(in, HCSClusterAllConfig.class, new Feature[0]);
+	in.close();
+	return obj;
     }
 
     /**

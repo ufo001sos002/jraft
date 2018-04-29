@@ -7,13 +7,20 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.extensions.FileBasedServerStateManager;
+import net.data.technology.jraft.extensions.Log4jLoggerFactory;
+import net.data.technology.jraft.extensions.RpcTcpClientFactory;
+import net.data.technology.jraft.extensions.RpcTcpListener;
 import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
+import net.data.technology.jraft.jsonobj.HCSNode;
 
 /**
  * <pre>
@@ -48,6 +55,7 @@ import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
  * 、TODO 需要考虑节点初次连接不上HCM，如本地配置有，走了本地配置时，后面连上HCM之后，是否拿最新配置?
  * （如果拿的话，就需要考虑比对配置是否一致 主要判断 公有配置、私有配置 是否一致，是否方便变更，分配配置 由Leader 计算下发） 
  * 集群配置 仅 初次启动时 通过 HCM_S_S 应用一次(判断文件是否存在)，后续通过HCM_S_R同步、私有配置每次启动均通过HCM_S_S 拿变更
+ * TODO Demo实现后，集群设计时 应考虑 负载转发 如何进行? 如何 模拟LVS，即节点可以考虑开启部分模拟LVS转发 至另一个节点处理，内部逻辑 仅做链路层包转发，还是 建立节点内部TCP通讯，转发数据包 以及回包
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
@@ -463,23 +471,95 @@ public class Middleware implements StateMachine {
     }
 
     /**
+     * 全局配置JSON对象
+     */
+    private HCSClusterAllConfig hcsClusterAllConfig = null;
+
+    /**
+     * 本地配置文件名(conf文件夹下)
+     */
+    public static final String LOCAL_CONFIG_FILE = "localConfig";
+
+    /**
+     * 保存配置文件
+     * 
+     * @return true 保存成功
+     */
+    public boolean saveConfigToFile() {
+	if (hcsClusterAllConfig != null) {
+	    try {
+		hcsClusterAllConfig.writeToFile(LOCAL_CONFIG_FILE);
+		return true;
+	    } catch (IOException e) {
+		// TODO 后期配置保存失败 后 生成异常编号 返回M
+		logger.error(Markers.CONFIG, "save config to file is error:" + e.getMessage(), e);
+	    }
+	}
+	return false;
+    }
+
+    /**
+     * true 启动成功
+     */
+    public volatile AtomicBoolean startupComplete = new AtomicBoolean();
+    /**
      * 处理配置对象
      * 
      * @param hcsClusterAllConfig
      * @return not null
      */
     public Tuple2<Integer, String> handleServerConfig(HCSClusterAllConfig hcsClusterAllConfig) {
-	// 初始化集群
-	ServerStateManager stateManager = new FileBasedServerStateManager(getClusterDirectoryPath());
-	ClusterConfiguration config = null;
-	if (stateManager.existsClusterConfiguration()) { // 本地存在配置
-	    config = stateManager.loadClusterConfiguration();
-	} else { // 初次启动本地无配置
-
+	synchronized (this) {
+	    if (startupComplete.get()) {
+		return new Tuple2<Integer, String>(MsgSign.SUCCESS_CODE, "ok");
+	    }
+	    // 初始化集群
+	    ServerStateManager stateManager = new FileBasedServerStateManager(getClusterDirectoryPath());
+	    ClusterConfiguration config = null;
+	    if (stateManager.existsClusterConfiguration()) { // 本地存在配置
+		config = stateManager.loadClusterConfiguration();
+	    } else { // 初次启动本地无配置
+		config = new ClusterConfiguration();
+		if (hcsClusterAllConfig.getHcsGroup() != null) {
+		    List<ClusterServer> servers = config.getServers();
+		    for (HCSNode hcsNode : hcsClusterAllConfig.getHcsGroup()) {
+			servers.add(new ClusterServer(hcsNode.getHcsId(), hcsNode.getIp(), hcsNode.getPort()));
+		    }
+		}
+	    }
+	    try {
+		this.sslClient.setHeartbeatInterval(hcsClusterAllConfig.getSystemConfig().getHeartbeatToM());
+		if (config.getServers().isEmpty()) {
+		    return new Tuple2<Integer, String>(MsgSign.ERROR_CODE_121000, "cluster info is empty in JSON");
+		}
+		URI localEndpoint = new URI(config.getServer(stateManager.getServerId()).getEndpoint());
+		ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(
+			Runtime.getRuntime().availableProcessors() * 2);
+		RaftParameters raftParameters = new RaftParameters().withElectionTimeoutUpper(5000)
+			.withElectionTimeoutLower(3000).withHeartbeatInterval(1500).withRpcFailureBackoff(500)
+			.withMaximumAppendingSize(200).withLogSyncBatchSize(5).withLogSyncStoppingGap(5)
+			.withSnapshotEnabled(10).withSyncSnapshotBlockSize(0);
+		// 构建状态机 对象
+		RaftContext context = new RaftContext(stateManager, this, raftParameters,
+			new RpcTcpListener(localEndpoint.getPort(), executor), new Log4jLoggerFactory(),
+			new RpcTcpClientFactory(executor), executor);
+		RaftConsensus.run(context);
+		this.hcsClusterAllConfig = hcsClusterAllConfig;
+		saveConfigToFile();
+		startupComplete.compareAndSet(false, true);
+		return new Tuple2<Integer, String>(MsgSign.SUCCESS_CODE, "ok");
+	    } catch (Exception e) {
+		// TODO 错误信息具体定义
+		logger.error("init cluster error:" + e.getMessage(), e);
+	    }
+	    return null;
 	}
-//	URI localEndpoint = new URI(config.getServer(stateManager.getServerId()).getEndpoint());
-	return null;
     }
+
+    /**
+     * 从HCM启动集群超时时间,超时后从本地文件启动(ms)
+     */
+    public static long startClusterTimeOut = 5 * 60 * 1000;
 
     /**
      * 启动
@@ -494,21 +574,25 @@ public class Middleware implements StateMachine {
 	    logger.error(Markers.SSLCLIENT, "socket connection to management is fail", e);
 	}
 	if (getHCMNewConfig) {
-	    // TODO 等待新配置
-	} else {
-	    // TODO 用本地配置
+	    // 等待新配置
+	    long time = System.currentTimeMillis();
+	    while (!startupComplete.get() || (System.currentTimeMillis() - time <= startClusterTimeOut)) {
+		Tools.sleep(100);
+	    }
 	}
-	// TODO start 启动
-    }
-
-    /**
-     * 保存配置文件
-     * 
-     * @return true 保存成功
-     */
-    public boolean saveConfigToFile() throws IOException {
-	// TODO saveConfigToFile;
-	return false;
+	// 用本地配置 启动
+	try {
+	    Tuple2<Integer, String> tuple2 = null;
+	    HCSClusterAllConfig hcsClusterAllConfig = HCSClusterAllConfig.loadFromFile(LOCAL_CONFIG_FILE);
+	    if (hcsClusterAllConfig != null) {
+		tuple2 = handleServerConfig(hcsClusterAllConfig);
+	    }
+	    if (tuple2 == null || MsgSign.SUCCESS_CODE != tuple2._1()) {
+		logger.error(Markers.CONFIG, "load config from file is failed,error:" + tuple2);
+	    }
+	} catch (IOException e) {
+	    logger.error(Markers.CONFIG, "load config from file is failed:" + e.getMessage(), e);
+	}
     }
 
     /**

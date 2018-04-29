@@ -1000,7 +1000,7 @@ public class NIOSSLClient implements SSLClient {
 	}
 	if (responseTuple2 == null) {
 	    String errorMgs = "handle json data[" + socketPacket.getDebugValue() + "] is error";
-	    responseTuple2 = new Tuple2<Integer, String>(MsgSign.ERROR_CODE_121000, errorMgs);
+	    responseTuple2 = new Tuple2<Integer, String>(MsgSign.ERROR_CODE_121001, errorMgs);
 	    logger.error(Markers.CONFIG, errorMgs);
 	}
 	TaskResponse taskResponse = new TaskResponse();
