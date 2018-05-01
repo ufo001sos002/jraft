@@ -513,6 +513,7 @@ public class Middleware implements StateMachine {
      */
     @Override
     public void start(RaftMessageSender raftMessageSender) {
+	this.raftMessageSender = raftMessageSender;
 	// TODO Auto-generated method stub
 	// 疑似 Raft数据存储(包含压缩)仅存储传输的 与快照无关(即不从快照读取) 快照可能更多用来状态机自身启动时 获取应用至最新 并且留意 幂等性
 
@@ -530,6 +531,29 @@ public class Middleware implements StateMachine {
 	    }
 	    // TODO 后续需判断是否在线  以及 保证 在增加 节点  或 删除节点 后 均衡(目前删除 会 均分到其他节点 一直调本方法即可，增加节点时 需追上当前分配数据 再均分)
 	    return servers.get(index++).getId();
+	}
+    }
+
+    /**
+     * 通过HCM_S_S 发送回包
+     * 
+     * @param socketPacket
+     * @param taskId
+     * @param code
+     * @param message
+     */
+    private void sendTaskResponse(SocketPacket socketPacket, String taskId, int code, String message) {
+	TaskResponse taskResponse = new TaskResponse();
+	taskResponse.setId(taskId);
+	taskResponse.setCode(code);
+	taskResponse.setMessage(message);
+	try {
+	    socketPacket.setData(taskResponse);
+	    socketPacket.writeBufferToSSLClient(this.sslClient);
+	    return;
+	} catch (Exception e) {
+	    logger.error(Markers.CONFIG, "ERROR sending the result of processing json data["
+		    + socketPacket.getDebugValue() + "]:" + e.getMessage(), e);
 	}
     }
 
@@ -555,6 +579,10 @@ public class Middleware implements StateMachine {
 	// 先追加 实例至 JSON对象并保存
 	this.hcsClusterAllConfig.getRdsInstances().addAll(rdss);
 	this.saveConfigToFile();
+	if (this.serverRole != ServerRole.Leader) {
+	    return;
+	}
+	// 以下 只有 Leader 才做
 	String handleId = null;
 	ArrayList<String> adds = null;
 	HashMap<String, ArrayList<String>> hcsAddsMap = new HashMap<String, ArrayList<String>>();
@@ -573,8 +601,29 @@ public class Middleware implements StateMachine {
 	    rdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
 	}
 	t_hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
-
-	// TODO 发送分配
+	socketPacket.flags = MsgSign.RAFT_RDS_ADD;
+	socketPacket.setData(t_hcsClusterAllConfig.toString().getBytes(SYSTEM_CHARSET));
+	final String taskId = t_hcsClusterAllConfig.getTaskId();
+	raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })
+		.whenCompleteAsync((Boolean result, Throwable err) -> {
+		    // TODO 应该发送 错误 信息 至HCM
+		    if (err != null) {
+			String errMsg = "raftMessageSender.appendEntries(" + socketPacket.getDebugValue()
+				+ ") is error:" + err.getMessage();
+			logger.error(Markers.STATEMACHINE, errMsg, err);
+			sendTaskResponse(socketPacket, taskId, MsgSign.ERROR_CODE_2211000, errMsg);
+		    } else if (!result) {
+			String errMsg = "raftMessageSender.appendEntries(" + socketPacket.getDebugValue()
+				+ ") is System rejected(" + result + ")";
+			logger.error(Markers.STATEMACHINE, errMsg);
+			sendTaskResponse(socketPacket, taskId, MsgSign.ERROR_CODE_2211000, errMsg);
+		    } else {
+			if (logger.isInfoEnabled()) {
+			    logger.info(Markers.STATEMACHINE, "raftMessageSender.appendEntries("
+				    + socketPacket.getDebugValue() + ") is Accpeted, server is being added");
+			}
+		    }
+		});
     }
 
     /**
@@ -594,6 +643,10 @@ public class Middleware implements StateMachine {
 	    case MsgSign.FLAG_RDS_ADD:
 		handleRDSInstanceAdd(socketPacket);
 		break;
+	    case MsgSign.RAFT_RDS_ADD:
+		// TODO 管理节点 初始化实例数据源
+		break;
+	    // TODO 实例 分配
 	    }
 	}
 	// TODO Auto-generated method stub

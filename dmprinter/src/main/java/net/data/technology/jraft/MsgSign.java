@@ -154,6 +154,11 @@ public class MsgSign {
      */
     public static final int FLAG_RDS_MYSQL_ADD = 44;
 
+    /**
+     * Raft RDS实例添加（绑定RDS-SERVER） [= {@value}]
+     */
+    public static final int RAFT_RDS_ADD = 101; // RDS实例添加（绑定RDS-SERVER）
+
 
     /**
      * 默认版本 [= {@value}]
