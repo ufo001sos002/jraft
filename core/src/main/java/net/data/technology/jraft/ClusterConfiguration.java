@@ -19,7 +19,6 @@ package net.data.technology.jraft;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -66,7 +65,7 @@ public class ClusterConfiguration {
     private List<ClusterServer> servers;
 
     public ClusterConfiguration(){
-        this.servers = new LinkedList<ClusterServer>();
+	this.servers = new ArrayList<ClusterServer>();
         this.logIndex = 0;
         this.lastLogIndex = 0;
     }

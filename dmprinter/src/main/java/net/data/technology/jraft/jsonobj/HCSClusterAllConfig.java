@@ -9,7 +9,6 @@ import java.util.List;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.Feature;
-import com.alibaba.fastjson.util.IOUtils;
 
 import net.data.technology.jraft.CollectionUtil.ToSortObject;
 import net.data.technology.jraft.Middleware;
@@ -160,7 +159,7 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
 	    file.createNewFile();
 	}
 	FileOutputStream fileOutputStream = new FileOutputStream(file);
-	fileOutputStream.write(toString().getBytes(IOUtils.UTF8));
+	fileOutputStream.write(toString().getBytes(Middleware.SYSTEM_CHARSET));
 	fileOutputStream.flush();
 	fileOutputStream.close();
     }

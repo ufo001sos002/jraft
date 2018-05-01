@@ -219,6 +219,7 @@ public class RaftServer implements RaftMessageHandler {
         this.quickCommitIndex = this.state.getCommitIndex();
         this.commitingThread = new CommittingThread(this);
         this.role = ServerRole.Follower;
+	this.stateMachine.notifyServerRole(this.role);
         new Thread(this.commitingThread).start();
 	this.restartElectionTimer(); // TODO ? 不理解
 	this.logger.info("Server %s started", this.id);
@@ -478,6 +479,7 @@ public class RaftServer implements RaftMessageHandler {
         this.state.increaseTerm();
 	this.state.setVotedFor("-1");
         this.role = ServerRole.Candidate;
+	this.stateMachine.notifyServerRole(this.role);
         this.votesGranted = 0;
         this.votesResponded = 0;
         this.electionCompleted = false;
@@ -592,6 +594,11 @@ public class RaftServer implements RaftMessageHandler {
         }
     }
 
+    /**
+     * 处理追加日志响应
+     * 
+     * @param response
+     */
     private void handleAppendEntriesResponse(RaftResponseMessage response){
         PeerServer peer = this.peers.get(response.getSource());
         if(peer == null){
@@ -757,6 +764,7 @@ public class RaftServer implements RaftMessageHandler {
     private void becomeLeader(){
         this.stopElectionTimer();
         this.role = ServerRole.Leader;
+	this.stateMachine.notifyServerRole(this.role);
         this.leader = this.id;
         this.serverToJoin = null;
         for(PeerServer server : this.peers.values()){
@@ -798,6 +806,7 @@ public class RaftServer implements RaftMessageHandler {
 
         this.serverToJoin = null;
         this.role = ServerRole.Follower;
+	this.stateMachine.notifyServerRole(this.role);
         this.restartElectionTimer();
     }
 
@@ -1513,6 +1522,7 @@ public class RaftServer implements RaftMessageHandler {
 
         this.catchingUp = true;
         this.role = ServerRole.Follower;
+	this.stateMachine.notifyServerRole(this.role);
         this.leader = request.getSource();
         this.state.setTerm(request.getTerm());
         this.state.setCommitIndex(0);
@@ -1681,13 +1691,15 @@ public class RaftServer implements RaftMessageHandler {
         }
 
         @Override
-        public CompletableFuture<Boolean> removeServer(int serverId) {
-            if(serverId < 0){
+	public CompletableFuture<Boolean> removeServer(String serverId) {
+	    if ("-1".equals(serverId) || serverId == null || serverId.trim().length() <= 0) {
                 return CompletableFuture.completedFuture(false);
             }
 
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
-            buffer.putInt(serverId);
+	    byte[] idData = serverId.getBytes(StandardCharsets.UTF_8);
+	    ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + idData.length);
+	    buffer.putInt(idData.length);
+	    buffer.put(idData);
             LogEntry[] logEntries = new LogEntry[1];
             logEntries[0] = new LogEntry(0, buffer.array(), LogValueType.ClusterServer);
             RaftRequestMessage request = new RaftRequestMessage();
@@ -1805,7 +1817,7 @@ public class RaftServer implements RaftMessageHandler {
                         currentCommitIndex += 1;
                         LogEntry logEntry = server.logStore.getLogEntryAt(currentCommitIndex);
                         if(logEntry.getValueType() == LogValueType.Application){
-                            server.stateMachine.commit(currentCommitIndex, logEntry.getValue());
+			    server.stateMachine.commit(currentCommitIndex, logEntry.getValue());
                         }else if(logEntry.getValueType() == LogValueType.Configuration){
                             synchronized(server){
                                 ClusterConfiguration newConfig = ClusterConfiguration.fromBytes(logEntry.getValue());

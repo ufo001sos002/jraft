@@ -111,8 +111,8 @@
 		{
 			"hcsId":1, // hcs节点id
 			"rdsIds":["HotDB_RDS_MM01_1"],//当前已分配的实例
-			"add":["HotDB_RDS_MM01_1"], // 增加实例id (实例动态切换部分 使用)
-			"delete":["HotDB_RDS_MM01_1"] // 增加实例id (实例动态切换部分使用)
+			"adds":["HotDB_RDS_MM01_1"], // 增加实例id (实例动态切换部分 使用)
+			"deletes":["HotDB_RDS_MM01_1"] // 增加实例id (实例动态切换部分使用)
 		}
 	]
 }

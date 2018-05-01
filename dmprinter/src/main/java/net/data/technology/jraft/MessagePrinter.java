@@ -491,7 +491,7 @@ public class MessagePrinter implements StateMachine {
             return;
         }else if(message.startsWith("rmsrv:")){
             try{
-                int id = Integer.parseInt(message.substring(index + 1));
+		String id = message.substring(index + 1);
                 messageSender.removeServer(id).whenCompleteAsync((Boolean result, Throwable err) -> {
                     if(err != null){
                         future.complete("System faulted, please retry");

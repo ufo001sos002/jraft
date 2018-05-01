@@ -17,11 +17,25 @@ public class RdsAllocation {
     /**
      * 分配增加 监管的 实例Id(实例动态切换部分 使用)
      */
-    public List<String> add;
+    public List<String> adds;
     /**
      * 移出分配 监管的 实例Id(实例动态切换部分 使用)
      */
-    public List<String> delete;
+    public List<String> deletes;
+
+    /**
+     * 
+     * 根据参数构造 类{@link RdsAllocation} 对象
+     * 
+     * @param hcsId
+     *            节点id
+     * @param add
+     *            当前分配增加的实例id
+     */
+    public RdsAllocation(String hcsId, List<String> adds) {
+	this.hcsId = hcsId;
+	this.adds = adds;
+    }
 
     /**
      * @return {@link #hcsId} 的值
@@ -39,36 +53,6 @@ public class RdsAllocation {
     }
 
     /**
-     * @return {@link #add} 的值
-     */
-    public List<String> getAdd() {
-	return add;
-    }
-
-    /**
-     * @param add
-     *            根据 add 设置 {@link #add}的值
-     */
-    public void setAdd(List<String> add) {
-	this.add = add;
-    }
-
-    /**
-     * @return {@link #delete} 的值
-     */
-    public List<String> getDelete() {
-	return delete;
-    }
-
-    /**
-     * @param delete
-     *            根据 delete 设置 {@link #delete}的值
-     */
-    public void setDelete(List<String> delete) {
-	this.delete = delete;
-    }
-
-    /**
      * @return {@link #rdsIds} 的值
      */
     public List<String> getRdsIds() {
@@ -82,6 +66,37 @@ public class RdsAllocation {
     public void setRdsIds(List<String> rdsIds) {
 	this.rdsIds = rdsIds;
     }
+
+    /**
+     * @return 返回 {@link #adds}值
+     */
+    public List<String> getAdds() {
+	return adds;
+    }
+
+    /**
+     * @param 用参数adds设置
+     *            {@link #adds}
+     */
+    public void setAdds(List<String> adds) {
+	this.adds = adds;
+    }
+
+    /**
+     * @return 返回 {@link #deletes}值
+     */
+    public List<String> getDeletes() {
+	return deletes;
+    }
+
+    /**
+     * @param 用参数deletes设置
+     *            {@link #deletes}
+     */
+    public void setDeletes(List<String> deletes) {
+	this.deletes = deletes;
+    }
+
 
 }
 

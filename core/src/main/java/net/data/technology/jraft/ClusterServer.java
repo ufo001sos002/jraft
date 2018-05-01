@@ -34,6 +34,8 @@ import java.nio.charset.StandardCharsets;
  * }
  * </pre>
  * 
+ * TODO 或许需要增加 机器账号密码 密钥文件 用于 远程 SSH VIP 绑定
+ * 
  * @author Data Technology LLC
  *
  */

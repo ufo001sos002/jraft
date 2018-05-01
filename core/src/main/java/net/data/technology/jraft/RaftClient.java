@@ -18,6 +18,7 @@
 package net.data.technology.jraft;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
@@ -128,13 +129,14 @@ public class RaftClient {
      * @param serverId
      * @return
      */
-    public CompletableFuture<Boolean> removeServer(int serverId){
-        if(serverId < 0){
+    public CompletableFuture<Boolean> removeServer(String serverId) {
+	if ("-1".equals(serverId) || serverId == null || serverId.length() <= 0) {
             throw new IllegalArgumentException("serverId must be equal or greater than zero");
         }
-
-        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
-        buffer.putInt(serverId);
+	byte[] idData = serverId.getBytes(StandardCharsets.UTF_8);
+	ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + idData.length);
+	buffer.putInt(idData.length);
+	buffer.put(idData);
         LogEntry[] logEntries = new LogEntry[1];
         logEntries[0] = new LogEntry(0, buffer.array(), LogValueType.ClusterServer);
         RaftRequestMessage request = new RaftRequestMessage();

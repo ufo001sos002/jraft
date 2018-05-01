@@ -40,7 +40,7 @@ public interface RaftMessageSender {
      * @return true if request is accepted or false if no leader, rpc fails or leader declines
      * <br>如果请求成功 返回 true,如果 没有当前没有leader 或 RPC 失败 或者 leader节点拒绝  返回false
      */
-    CompletableFuture<Boolean> removeServer(int serverId);
+    CompletableFuture<Boolean> removeServer(String serverId);
 
     /**
      * Append multiple application logs to log store

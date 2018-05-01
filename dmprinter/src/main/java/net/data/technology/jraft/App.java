@@ -20,6 +20,7 @@ package net.data.technology.jraft;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +38,7 @@ import net.data.technology.jraft.extensions.FileBasedServerStateManager;
 import net.data.technology.jraft.extensions.Log4jLoggerFactory;
 import net.data.technology.jraft.extensions.RpcTcpClientFactory;
 import net.data.technology.jraft.extensions.RpcTcpListener;
+import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 
 public class App
 {
@@ -49,6 +51,10 @@ public class App
      */
     public static void main( String[] args ) throws Exception
     {
+	if (args.length == 1 && "clusterClient".equalsIgnoreCase(args[0])) {
+	    executeAsClient();
+	    return;
+	}
         if(args.length < 2){
             System.out.println("Please specify execution mode and a base directory for this instance.");
             return;
@@ -114,7 +120,58 @@ public class App
 	stateMachine.stop();
     }
 
-    private static void executeAsClient(ClusterConfiguration configuration, ExecutorService executor) throws Exception{
+    private static void executeAsClient() throws Exception {
+	BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+	System.out.println("Please write cluster json:");
+	String configJSONStr = reader.readLine().trim();
+	HCSClusterAllConfig hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(configJSONStr);
+	ClusterConfiguration configuration = Middleware
+		.getClusterConfigurationFromHCSClusterAllConfig(hcsClusterAllConfig);
+	RaftClient client = new RaftClient(
+		new RpcTcpClientFactory(new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors())),
+		configuration, new Log4jLoggerFactory());
+	while (true) {
+	    System.out.print("Message:");
+	    String message = reader.readLine();
+	    if (message.startsWith("addsrv")) {
+		StringTokenizer tokenizer = new StringTokenizer(message, ";");
+		ArrayList<String> values = new ArrayList<String>();
+		while (tokenizer.hasMoreTokens()) {
+		    values.add(tokenizer.nextToken());
+		}
+
+		if (values.size() == 3) { // TODO JSON 字符串 增加服务器
+		    ClusterServer server = new ClusterServer();
+		    server.setEndpoint(values.get(2));
+		    server.setId(values.get(1));
+		    boolean accepted = client.addServer(server).get();
+		    System.out.println("Accepted: " + String.valueOf(accepted));
+		    continue;
+		}
+	    } else if (message.startsWith("fmt:")) {// 增加日志
+		System.out.println("plase print int flag:");
+		int flag = Integer.parseInt(reader.readLine().trim());
+		System.out.println("plase print send json string:");
+		String sendJsonStr = reader.readLine().trim();
+		boolean accepted = client.appendEntries(new byte[][] {
+			new SocketPacket(MsgSign.TYPE_RDS_SERVER, flag, sendJsonStr.getBytes(StandardCharsets.UTF_8))
+				.writeBytes() }).get();
+		System.out.println("Accepted: " + String.valueOf(accepted));
+		continue;
+	    } else if (message.startsWith("rmsrv:")) { // TODO JSON 字符串 移除服务器
+		String text = message.substring(6);
+		String serverId = text.trim();
+		boolean accepted = client.removeServer(serverId).get();
+		System.out.println("Accepted: " + String.valueOf(accepted));
+		continue;
+	    }
+
+	    boolean accepted = client.appendEntries(new byte[][] { message.getBytes() }).get();
+	    System.out.println("Accepted: " + String.valueOf(accepted));
+	}
+    }
+
+    private static void executeAsClient(ClusterConfiguration configuration, ExecutorService executor) throws Exception {
         RaftClient client = new RaftClient(new RpcTcpClientFactory(executor), configuration, new Log4jLoggerFactory());
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         while(true){
@@ -148,7 +205,7 @@ public class App
                 continue;
             }else if(message.startsWith("rmsrv:")){ // 移除服务器
                 String text = message.substring(6);
-                int serverId = Integer.parseInt(text.trim());
+		String serverId = text.trim();
                 boolean accepted = client.removeServer(serverId).get();
                 System.out.println("Accepted: " + String.valueOf(accepted));
                 continue;
