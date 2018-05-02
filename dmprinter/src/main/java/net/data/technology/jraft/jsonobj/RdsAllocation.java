@@ -29,6 +29,17 @@ public class RdsAllocation {
      * 
      * @param hcsId
      *            节点id
+     */
+    public RdsAllocation(String hcsId) {
+	this.hcsId = hcsId;
+    }
+
+    /**
+     * 
+     * 根据参数构造 类{@link RdsAllocation} 对象
+     * 
+     * @param hcsId
+     *            节点id
      * @param add
      *            当前分配增加的实例id
      */

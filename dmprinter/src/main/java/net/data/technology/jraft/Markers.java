@@ -19,4 +19,12 @@ public interface Markers {
      * 与 StateMachine 相关
      */
     Log4jMarker STATEMACHINE = new Log4jMarker(MarkerManager.getMarker("STATEMACHINE"));
+    /**
+     * 连接相关
+     */
+    Log4jMarker CONNECTION = new Log4jMarker(MarkerManager.getMarker("CONNECTION"));
+    /**
+     * 服务监听相关
+     */
+    Log4jMarker SERVERLISTEN = new Log4jMarker(MarkerManager.getMarker("SERVERLISTEN"));
 }

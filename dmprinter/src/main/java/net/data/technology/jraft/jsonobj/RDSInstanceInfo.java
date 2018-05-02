@@ -13,7 +13,7 @@ import net.data.technology.jraft.CollectionUtil.CloneAndSortObject;
  * RDS实例具体信息 <br>
  * <b>注：如字段为null，则表示未设置该值</b>
  */
-public class RDSInstance extends CloneAndSortObject<RDSInstance> {
+public class RDSInstanceInfo extends CloneAndSortObject<RDSInstanceInfo> {
     /**
      * 实例Id not null
      */
@@ -381,7 +381,7 @@ public class RDSInstance extends CloneAndSortObject<RDSInstance> {
      * @param jsonStr
      * @return
      */
-    public static RDSInstance loadRDSInstanceFromJSONBytes(byte[] jsonBytes) {
+    public static RDSInstanceInfo loadRDSInstanceFromJSONBytes(byte[] jsonBytes) {
         return loadRDSInstanceFromJSONStr(new String(jsonBytes));
     }
 
@@ -391,8 +391,8 @@ public class RDSInstance extends CloneAndSortObject<RDSInstance> {
      * @param jsonStr
      * @return
      */
-    public static RDSInstance loadRDSInstanceFromJSONStr(String jsonStr) {
-        return JSON.parseObject(jsonStr, RDSInstance.class);
+    public static RDSInstanceInfo loadRDSInstanceFromJSONStr(String jsonStr) {
+        return JSON.parseObject(jsonStr, RDSInstanceInfo.class);
     }
 
     /*
@@ -424,7 +424,7 @@ public class RDSInstance extends CloneAndSortObject<RDSInstance> {
      */
     @Override
     protected Object clone() throws CloneNotSupportedException {
-        RDSInstance clone = (RDSInstance) super.clone();
+        RDSInstanceInfo clone = (RDSInstanceInfo) super.clone();
         if (this.mysqlInfos != null) {
             clone.mysqlInfos = CollectionUtil.cloneObject(this.mysqlInfos);
         }
@@ -446,7 +446,7 @@ public class RDSInstance extends CloneAndSortObject<RDSInstance> {
      * @see java.lang.Comparable#compareTo(java.lang.Object)
      */
     @Override
-    public int compareTo(RDSInstance o) {
+    public int compareTo(RDSInstanceInfo o) {
         return this.rdsId != null && o.rdsId != null ? this.rdsId.compareTo(o.rdsId) : 0;
     }
 

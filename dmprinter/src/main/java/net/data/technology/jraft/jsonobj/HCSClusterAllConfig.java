@@ -32,7 +32,7 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
     /**
      * 公有配置 部分：集群中所需要处理的 实例集合 RDS实例具体信息
      */
-    private List<RDSInstance> rdsInstances;
+    private List<RDSInstanceInfo> rdsInstances;
 
     /**
      * 公有配置 部分：实例分配规则
@@ -76,7 +76,7 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
     /**
      * @return {@link #rdsInstances} 的值
      */
-    public List<RDSInstance> getRdsInstances() {
+    public List<RDSInstanceInfo> getRdsInstances() {
 	return rdsInstances;
     }
 
@@ -84,7 +84,7 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
      * @param rdsInstances
      *            根据 rdsInstances 设置 {@link #rdsInstances}的值
      */
-    public void setRdsInstances(List<RDSInstance> rdsInstances) {
+    public void setRdsInstances(List<RDSInstanceInfo> rdsInstances) {
 	this.rdsInstances = rdsInstances;
     }
 

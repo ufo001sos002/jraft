@@ -24,7 +24,7 @@ import net.data.technology.jraft.extensions.RpcTcpClientFactory;
 import net.data.technology.jraft.extensions.RpcTcpListener;
 import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 import net.data.technology.jraft.jsonobj.HCSNode;
-import net.data.technology.jraft.jsonobj.RDSInstance;
+import net.data.technology.jraft.jsonobj.RDSInstanceInfo;
 import net.data.technology.jraft.jsonobj.RdsAllocation;
 
 /**
@@ -64,8 +64,8 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
- * --集群配置(整个集群节点信息；由HCM 根据所处集群 下发，仅集群节点第一次启动时 状态机判断是否有集群信息，没有则问HCM要，连上集群后由Leader的集群信息覆盖，后续均走本地完整配置快照 并由集群同步至最新 ，)
- * --公共配置(集群共享配置；包含:整个集群中节点信息(除集群配置中 之外的配置信息)、整个集群需监控的实例相关、实例集群分派规则 等等；由Leader(或HCM_S_R)下发，各集群节点一致) 
+ * --集群配置(整个集群节点信息；由HCM 根据所处集群 下发，仅集群节点第一次启动时 状态机判断是否有集群信息，没有则问HCM要，连上集群后由Leader的集群信息覆盖，后续均走本地完整配置快照 并由集群同步至最新 )
+ * --公共配置(集群共享配置；包含:整个集群中节点信息(除集群配置中 之外的配置信息)、整个集群需监控的实例相关、实例集群分派规则 等等；由Leader(或HCM_S_R)下发，各集群节点一致,初始启动时 走 本地完整配置快照 获取 并由集群同步至最新)
  * --私有配置(各集群节点私有启动相关配置；由HCM 根据集群节点分别下发，各集群节点不一致)
  * --分配配置(各节点被分配到 需要管理的实例，由Leader(或HCM_S_R)下发，各集群节点一致，但主要由Leader计算下发，尤其是程序启动(初次或重启)时 )
  * 以上构成完整配置，存在本地配置文件LOCALCONFIG中(也可以拆分多个文件，视情况调整)
@@ -114,6 +114,7 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * 、Leader判断(连接断开 或 数据包接收异常) 节点故障后，重新计算实例归属后，新增一条 分配配置(某节点增加实例管理) 同步至各节点直至commit
  * 、commit之后，各节点状态机根据配置(需考虑实例状态) 增加对应实例管理（对于监控状态的则需 尝试ping后看是否需要移除远端VIP 再绑定，也可考虑Leader操作） 并将结果通过HCM_S_S返回告知
  * (考虑 ： Leader是通过HCM_S_S 还是HCM_S_R通道告知HCM 节点故障，故障节点HCM_S_S通道未发送心跳也代表故障,但担心仅此通道异常而已，还需Leader再发送一次确认)
+ * 、TODO 其他节点的JSON  针对该节点的 所有 分配全部置空
  * 
  * 某个集群节点重启：
  * 、与添加集群节点一致，HCM挂了 则超时即 应用本地配置(就算本地配置中有 该节点的 分配配置  但状态机不应用 分配配置)
@@ -216,6 +217,18 @@ public class Middleware implements StateMachine {
      * 当前集群分配索引
      */
     private int index = 0;
+    /**
+     * K: 实例ID V：该实例对应 分配实例
+     */
+    private HashMap<String, RdsAllocation> rdsAllocationMap = new HashMap<String, RdsAllocation>();
+    /**
+     * K：实例ID V：实例JSON对象 TODO 启动时加载本地
+     */
+    private HashMap<String, RDSInstanceInfo> rdsInstanceInfoMap = new HashMap<String, RDSInstanceInfo>();
+    /**
+     * 被当前节点管理的 实例对象 Map K：实例ID V：实例对象
+     */
+    private HashMap<String, RDSInstance> rdsInstanceMap = new HashMap<String, RDSInstance>();
 
 
     /**
@@ -320,7 +333,7 @@ public class Middleware implements StateMachine {
      * 
      * @return
      */
-    public int getExecutorSize() {
+    public static int getExecutorSize() {
 	return Runtime.getRuntime().availableProcessors() * 2;
     }
 
@@ -345,6 +358,7 @@ public class Middleware implements StateMachine {
 	intHCMSocketPort();
 	this.sslClient = new NIOSSLClient(getSocketKeyPath(), getSocketKeyStorePass(), getSocketKeyPass(),
 		getSocketTrustPath(), getSocketTrustStorePass(), getExecutorSize());
+	AIOAcceptors.getInstance().init();
     }
 
     /**
@@ -564,20 +578,36 @@ public class Middleware implements StateMachine {
      */
     private void handleRDSInstanceAdd(SocketPacket socketPacket) {
 	if (socketPacket.data == null || socketPacket.data.length <= 0) {
+	    logger.error(Markers.STATEMACHINE,
+		    "handleRDSInstanceAdd(" + socketPacket.getDebugValue() + ") JSON info is null");
 	    return;
 	}
 	HCSClusterAllConfig t_hcsClusterAllConfig = null;
 	t_hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(getStringFromBytes(socketPacket.data));
 	if (t_hcsClusterAllConfig == null) {
+	    logger.error(Markers.STATEMACHINE,
+		    "handleRDSInstanceAdd(" + socketPacket.getDebugValue() + ") JSON info is null");
 	    return;
 	}
-	List<RDSInstance> rdss = t_hcsClusterAllConfig.getRdsInstances();
+	List<RDSInstanceInfo> rdss = t_hcsClusterAllConfig.getRdsInstances();
 	if (rdss == null || rdss.isEmpty()) {
-	    // TODO 根据任务号 回应
+	    if (this.serverRole == ServerRole.Leader) {
+		String msg = "handleRDSInstanceAdd(" + socketPacket.getDebugValue() + ") RDSInstance info is empty";
+		if (logger.isInfoEnabled()) {
+		    logger.info(Markers.STATEMACHINE, msg);
+		}
+		sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, msg);
+	    }
 	    return;
 	}
 	// 先追加 实例至 JSON对象并保存
-	this.hcsClusterAllConfig.getRdsInstances().addAll(rdss);
+	for (RDSInstanceInfo rds : rdss) {
+	    if (rdsInstanceInfoMap.containsKey(rds.getRdsId())) {
+		continue;
+	    }
+	    rdsInstanceInfoMap.put(rds.getRdsId(), rds);
+	    this.hcsClusterAllConfig.getRdsInstances().add(rds);
+	}
 	this.saveConfigToFile();
 	if (this.serverRole != ServerRole.Leader) {
 	    return;
@@ -586,7 +616,7 @@ public class Middleware implements StateMachine {
 	String handleId = null;
 	ArrayList<String> adds = null;
 	HashMap<String, ArrayList<String>> hcsAddsMap = new HashMap<String, ArrayList<String>>();
-	for (RDSInstance rds : rdss) {
+	for (RDSInstanceInfo rds : rdss) {
 	    handleId = getHandleServerId();
 	    adds = hcsAddsMap.get(handleId);
 	    if (adds == null) {
@@ -606,7 +636,6 @@ public class Middleware implements StateMachine {
 	final String taskId = t_hcsClusterAllConfig.getTaskId();
 	raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })
 		.whenCompleteAsync((Boolean result, Throwable err) -> {
-		    // TODO 应该发送 错误 信息 至HCM
 		    if (err != null) {
 			String errMsg = "raftMessageSender.appendEntries(" + socketPacket.getDebugValue()
 				+ ") is error:" + err.getMessage();
@@ -627,6 +656,143 @@ public class Middleware implements StateMachine {
     }
 
     /**
+     * 处理 {@link MsgSign#RAFT_RDS_ADD} 结果
+     * 
+     * @param socketPacket
+     */
+    private void handleRDSInstanceAllocationAdd(SocketPacket socketPacket) {
+	if (socketPacket.data == null || socketPacket.data.length <= 0) {
+	    logger.error(Markers.STATEMACHINE,
+		    "handleRDSInstanceAllocationAdd(" + socketPacket.getDebugValue() + ") JSON info is null");
+	    return;
+	}
+	HCSClusterAllConfig t_hcsClusterAllConfig = null;
+	t_hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(getStringFromBytes(socketPacket.data));
+	if (t_hcsClusterAllConfig == null) {
+	    logger.error(Markers.STATEMACHINE,
+		    "handleRDSInstanceAllocationAdd(" + socketPacket.getDebugValue() + ") JSON info is null");
+	    return;
+	}
+	List<RdsAllocation> t_rdsAllocations = t_hcsClusterAllConfig.getRdsAllocations();
+	if (t_rdsAllocations == null || t_rdsAllocations.isEmpty()) {
+	    String msg = "handleRDSInstanceAllocationAdd(" + socketPacket.getDebugValue()
+		    + ") Rds Allocation info is empty";
+	    logger.error(Markers.STATEMACHINE, msg);
+	    sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.ERROR_CODE_2221001, msg);
+	    return;
+	}
+	List<RdsAllocation> rdsAllocations = null;
+	RdsAllocation rdsAllocation = null;
+	List<String> rdsIds = null;
+	List<String> adds = null;
+	synchronized (rdsAllocationMap) {
+	    rdsAllocations = hcsClusterAllConfig.getRdsAllocations();
+	    if(rdsAllocations == null) {// 当前节点 还未有 实例分配 集合JSON对象
+		rdsAllocations = new ArrayList<RdsAllocation>();
+		hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	    }
+	    for (RdsAllocation t_rdsAllocation : t_rdsAllocations) { // 为每个节点 分配记录保存
+		rdsAllocation = rdsAllocationMap.get(t_rdsAllocation.getHcsId());
+		if (rdsAllocation == null) {
+		    rdsAllocation = new RdsAllocation(t_rdsAllocation.getHcsId());
+		    rdsAllocationMap.put(t_rdsAllocation.getHcsId(), rdsAllocation);
+		    rdsAllocations.add(rdsAllocation);
+		}
+		rdsIds = rdsAllocation.getRdsIds();
+		if (rdsIds == null) { // 节点实例 分配 对象 还未初始化 则初始化
+		    rdsIds = new ArrayList<String>();
+		    rdsAllocation.setRdsIds(rdsIds);
+		}
+		for (String rdsId : t_rdsAllocation.getAdds()) {
+		    rdsIds.add(rdsId);
+		}
+		if (this.rdsServerId.equals(t_rdsAllocation.getHcsId())) { // 需当前节点管理初始化的实例
+		    adds = t_rdsAllocation.getAdds();
+		}
+	    }
+	}
+	// 先追加 实例至 JSON对象并保存
+	this.saveConfigToFile();
+	if (adds == null || adds.isEmpty()) { // 无需初始化的 直接结束
+	    return;
+	}
+	// 初始化增加的实例
+	RDSInstanceInfo rdsInstanceInfo = null;
+	RDSInstance rdsInstance = null;
+	for (String rdsId : adds) {
+	    rdsInstanceInfo = rdsInstanceInfoMap.get(rdsId);
+	    if (rdsInstanceInfo == null) {
+		// TODO 后续 实例编号+错误编号返回
+		logger.error(Markers.STATEMACHINE, "rds id :" + rdsId + " JSON is non-existent");
+		continue;
+	    }
+	    rdsInstance = RDSInstance.initRDSInstance(rdsInstanceInfo, true);
+	    rdsInstanceMap.put(rdsId, rdsInstance);
+	}
+	sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
+    }
+
+    /**
+     * 处理 {@link MsgSign#FLAG_RDS_ALLOCATE} 结果
+     * 
+     * @param socketPacket
+     */
+    private void handleRDSInstanceAllocate(SocketPacket socketPacket) {
+	if (socketPacket.data == null || socketPacket.data.length <= 0) {
+	    logger.error(Markers.STATEMACHINE,
+		    "handleRDSInstanceAllocate(" + socketPacket.getDebugValue() + ") JSON info is null");
+	    return;
+	}
+	HCSClusterAllConfig t_hcsClusterAllConfig = null;
+	t_hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(getStringFromBytes(socketPacket.data));
+	if (t_hcsClusterAllConfig == null) {
+	    logger.error(Markers.STATEMACHINE,
+		    "handleRDSInstanceAllocate(" + socketPacket.getDebugValue() + ") JSON info is null");
+	    return;
+	}
+	List<RDSInstanceInfo> rdss = t_hcsClusterAllConfig.getRdsInstances();
+	if (rdss == null || rdss.isEmpty()) {
+	    if (this.serverRole == ServerRole.Leader) {
+		String msg = "handleRDSInstanceAllocate(" + socketPacket.getDebugValue()
+			+ ") RDSInstance info is empty";
+		if (logger.isInfoEnabled()) {
+		    logger.info(Markers.STATEMACHINE, msg);
+		}
+		sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, msg);
+	    }
+	    return;
+	}
+	// 先追加 实例至 JSON对象并保存
+	RDSInstanceInfo rdsInstanceInfo = null;
+	RDSInstance rdsInstance = null;
+	ArrayList<RDSInstance> allocates = new ArrayList<RDSInstance>();
+	for (RDSInstanceInfo rds : rdss) {
+	    rdsInstanceInfo = rdsInstanceInfoMap.get(rds.getRdsId());
+	    if (rdsInstanceInfo == null) {
+		continue;
+	    }
+	    if (rds.getVip() != null) {
+		rdsInstanceInfo.setVip(rds.getVip());
+	    }
+	    if (rds.getPort() != null) {
+		rdsInstanceInfo.setPort(rds.getPort());
+	    }
+	    rdsInstance = rdsInstanceMap.get(rds.getRdsId());
+	    if (rdsInstance != null && rdsInstanceInfo.getStatus() == RDSInstance.RDS_INSTANCE_STATUS_STOCK) {
+		allocates.add(rdsInstance);
+	    }
+	}
+	this.saveConfigToFile();
+	if (allocates.isEmpty()) { // 未有需要监听的实例
+	    return;
+	}
+	for (RDSInstance allocateRDSInstance : allocates) {
+	    AIOAcceptors.getInstance().addServerListen(allocateRDSInstance);// TODO 对应实例 监听失败 错误返回。
+	}
+	sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
+    }
+
+    /**
      * 针对提交的 日志 进行应用(考虑)
      * 
      * @see net.data.technology.jraft.StateMachine#commit(long, byte[])
@@ -643,10 +809,12 @@ public class Middleware implements StateMachine {
 	    case MsgSign.FLAG_RDS_ADD:
 		handleRDSInstanceAdd(socketPacket);
 		break;
-	    case MsgSign.RAFT_RDS_ADD:
-		// TODO 管理节点 初始化实例数据源
+	    case MsgSign.FLAG_RDS_ALLOCATE:
+		handleRDSInstanceAllocate(socketPacket);
 		break;
-	    // TODO 实例 分配
+	    case MsgSign.RAFT_RDS_ADD:
+		handleRDSInstanceAllocationAdd(socketPacket);
+		break;
 	    }
 	}
 	// TODO Auto-generated method stub
