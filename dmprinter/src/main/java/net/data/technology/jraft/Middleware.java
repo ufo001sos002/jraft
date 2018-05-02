@@ -787,6 +787,7 @@ public class Middleware implements StateMachine {
 	    return;
 	}
 	for (RDSInstance allocateRDSInstance : allocates) {
+	    NetworkTools.addIp(allocateRDSInstance.getRdsInstanceInfo().getVip());
 	    AIOAcceptors.getInstance().addServerListen(allocateRDSInstance);// TODO 对应实例 监听失败 错误返回。
 	}
 	sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");

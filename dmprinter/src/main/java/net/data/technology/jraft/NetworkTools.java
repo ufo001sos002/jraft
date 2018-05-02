@@ -1,8 +1,15 @@
 package net.data.technology.jraft;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 //import org.slf4j.Logger;
 //import org.slf4j.LoggerFactory;
@@ -209,6 +216,140 @@ public class NetworkTools {
 	    return -2; // 当前未绑定VIP，但可以ping的通 表示其他地方已绑定
 	}
 	deviceName = getDeviceByIp(localIp);
+	if (deviceName == null) { // 本地IP 获取 所在网卡 失败
+	    return -3;
+	}
+	if (addIpByCommand(vip, deviceName)) { // 绑定VIP
+	    if (pingIp(vip)) { // ping vip 是否成功
+		return 1;
+	    } else {
+		delIp(vip); // 尝试解除IP 无论结果与否，由上端进行再次尝试 (一般不会出现)
+	    }
+	}
+	return -1;
+    }
+
+    /**
+     * 返回两个字符串从头至尾 相同字符的 长度
+     * 
+     * @param strA
+     * @param strB
+     * @return
+     */
+    private static int getSameCharLength(String strA, String strB) {
+	char[] cA = strA.toCharArray();
+	char[] cB = strB.toCharArray();
+	int num = cA.length > cB.length ? cB.length : cA.length;
+	for (int i = 0; i < num; i++) {
+	    if (cA[i] != cB[i]) {
+		return i;
+	    }
+	}
+	return 0;
+    }
+
+    /**
+     * 根据ip地址返回 同网段网卡名称,如异常获取失败 则返回null
+     * 
+     * @param ip
+     *            需返回网卡名称的 IP
+     * @return null 表示异常，获取失败
+     */
+    public static String getSameNetworkSegmentDeviceByIp(String ip) {
+	ProcessBuilder builder = new ProcessBuilder("ip", "addr");
+	Process process = null;
+	try {
+	    process = builder.start();
+	    int processComplete = process.waitFor();
+	    if (processComplete != 0) {
+		InputStream err = process.getErrorStream();
+		int length = err.available();
+		if (length >= 0) {
+		    byte[] errArray = new byte[length];
+		    err.read(errArray, 0, length);
+		    // logger.warn("run 'ip addr' is error:" + new String(errArray));
+		    System.err.println("run 'ip addr' is error:" + new String(errArray));
+		}
+	    } else {
+		BufferedReader in = new BufferedReader(new InputStreamReader(process.getInputStream()));
+		String line = null;
+		Pattern devPattern = Pattern.compile("(\\d{1})\\:(\\s+)(\\S+)\\:(.*)");// 3 dev
+		Pattern ipPattern = Pattern.compile("(\\s+)inet(\\s{1})(\\S+)/(.*)"); // 3 ip
+		Matcher matcher = null;
+		HashMap<String, ArrayList<String>> devIpMap = new HashMap<String, ArrayList<String>>();
+		String dev = null;
+		String devIp = null;
+		ArrayList<String> ips = null;
+		while ((line = in.readLine()) != null) {
+		    matcher = devPattern.matcher(line);
+		    if(matcher.find()) {
+			dev = matcher.group(3);
+			ips = devIpMap.get(dev);
+			if (ips == null) {
+			    ips = new ArrayList<String>();
+			    devIpMap.put(dev, ips);
+			}
+			continue;
+		    }
+		    matcher = ipPattern.matcher(line);
+		    if(matcher.find()) {
+			devIp = matcher.group(3);
+			if (ips != null) {
+			    ips.add(devIp.trim());
+			}
+		    }
+		}
+		dev = null;
+		int maxNum = 0;
+		int num = 0;
+		for (Entry<String, ArrayList<String>> entry : devIpMap.entrySet()) {
+		    ips = entry.getValue();
+		    for (String t_ip : ips) {
+			num = getSameCharLength(ip, t_ip);
+			if (num >= maxNum) {
+			    dev = entry.getKey();
+			    maxNum = num;
+			}
+		    }
+		}
+		return dev;
+	    }
+	} catch (Exception e) {
+	    // logger.warn("run 'ip addr' is error:", e);
+	    System.err.println("run 'ip addr' is error:" + e.getMessage());
+	    e.printStackTrace();
+	} finally {
+	    if (process != null) {
+		process.destroy();
+	    }
+	}
+	return null;
+    }
+
+    /**
+     * 增加IP绑定(绑定在同一网段网卡上)；>=0 表示已绑定VIP
+     * 
+     * @param ip
+     * @return 1 表示成功<br>
+     *         0 表示已监听<br>
+     *         -1 表示失败<br>
+     *         -2 表示VIP已在其他地方被绑定<br>
+     *         -3 表示 根据 本地IP 获取 所在网卡 失败 <br>
+     */
+    public static int addIp(String vip) {
+	String deviceName = getDeviceByIp(vip);
+	if (deviceName != null) { // 当前VIP 已监听
+	    if (pingIp(vip)) { // ping vip 是否成功
+		return 0;
+	    } else {
+		delIp(vip); // 尝试解除IP 无论结果与否，由上端进行再次尝试(一般不会出现)
+		return -1;
+	    }
+	}
+	if (pingIp(vip)) {
+	    return -2; // 当前未绑定VIP，但可以ping的通 表示其他地方已绑定
+	}
+	deviceName = getSameNetworkSegmentDeviceByIp(vip);
 	if (deviceName == null) { // 本地IP 获取 所在网卡 失败
 	    return -3;
 	}
