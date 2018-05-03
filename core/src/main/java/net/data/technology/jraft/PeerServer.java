@@ -94,6 +94,14 @@ public class PeerServer {
      * 上下文共享计划线程池对象 {@link RaftContext#getScheduledExecutor()}
      */
     private Executor executor;
+    /**
+     * 状态机对象
+     */
+    private final StateMachine stateMachine;
+    /**
+     * 离线次数(心跳发送次数)
+     */
+    private AtomicInteger offlineNum = new AtomicInteger();
 
     /**
      * 
@@ -108,6 +116,7 @@ public class PeerServer {
      */
     public PeerServer(ClusterServer server, RaftContext context, final Consumer<PeerServer> heartbeatTimeOutConsumer) {
         this.clusterConfig = server;
+	this.stateMachine = context.getStateMachine();
         this.rpcClient = context.getRpcClientFactory().createRpcClient(server.getEndpoint());// 通过工厂创建rpc客户端
         this.busyFlag = new AtomicInteger(0);
         this.pendingCommitFlag = new AtomicInteger(0);
@@ -281,13 +290,17 @@ public class PeerServer {
                     }
 
                     this.resumeHeartbeatingSpeed();
+		    offlineNum.getAndSet(0);
+		    this.stateMachine.notifyServerStatus(this.getId(), StateMachine.STATUS_ONLINE);
                     return CompletableFuture.completedFuture(response);
                 }, this.executor)
                 .exceptionally((Throwable error) -> {
                     if(isAppendRequest){
                         this.setFree();
                     }
-
+		    if (offlineNum.incrementAndGet() == 2) {
+			this.stateMachine.notifyServerStatus(this.getId(), StateMachine.STATUS_OFFLINE);
+		    }
                     this.slowDownHeartbeating();
                     throw new RpcException(error, request);
                 });

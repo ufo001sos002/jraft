@@ -25,6 +25,14 @@ import java.util.concurrent.CompletableFuture;
  * TODO ?不理解 具体干啥的？ 木知
  */
 public interface StateMachine {
+    /**
+     * 在线
+     */
+    public final static int STATUS_ONLINE = 0;
+    /**
+     * 离线
+     */
+    public final static int STATUS_OFFLINE = 1;
 
     /**
      * 通知当前节点 角色

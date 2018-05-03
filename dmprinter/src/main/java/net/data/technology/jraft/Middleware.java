@@ -103,7 +103,7 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * 、HCM_S_R下发 分配配置 指定 实例 新分配节点 至 Leader,Leader同步至各节点直至commit
  * 、后续 commit之后，可以与上面一致(只是和上面一致 可以 考虑 Leader(或增加实例节点)可以直接移除VIP，这样可实例添加和移除可同时进行)
  * 
- * 移除集群节点：(节点 分正常与非正常) // TODO 移除Leader节点
+ * 移除集群节点：(节点 分正常与非正常) // TODO 后续考虑如何 移除Leader节点
  * 、HCM_S_R下发实例切换配置至Leader,Leader同步至各节点直至commit（或直接不同步）
  * 、commit之后，节点正常的，状态机移除VIP 停止监听 并移除实例，节点非正常的 不做任何操作
  * 、Leader重新计算实例归属后，新增一条 分配配置(某节点增加实例管理) 同步至各节点直至commit
@@ -1065,7 +1065,7 @@ public class Middleware implements StateMachine {
 	    this.status = status;
 	}
 	// TODO 方法未埋点 并制定协议 HCM_S_S 发送HCM 状态变更
-
+	// TODO 实例分配的时候 需判断状态后再进行,之前需进行实例状态同步
     }
 
     /**
