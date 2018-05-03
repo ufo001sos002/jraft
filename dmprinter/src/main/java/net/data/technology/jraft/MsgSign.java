@@ -158,6 +158,10 @@ public class MsgSign {
      * Raft RDS实例添加（绑定RDS-SERVER） [= {@value}]
      */
     public static final int RAFT_RDS_ADD = 101; // RDS实例添加（绑定RDS-SERVER）
+    /**
+     * Raft RDS实例转移（实例 归属变更） [= {@value}]
+     */
+    public static final int RAFT_RDS_CHANGE = 102; // RDS实例添加（绑定RDS-SERVER）
 
 
     /**

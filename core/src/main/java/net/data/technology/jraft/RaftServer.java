@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -980,8 +979,8 @@ public class RaftServer implements RaftMessageHandler {
                 newConfig.getServers().size(),
                 newConfig.getLastLogIndex(),
                 newConfig.getLogIndex());
-	List<String> serversRemoved = new LinkedList<String>();
-        List<ClusterServer> serversAdded = new LinkedList<ClusterServer>();
+	List<String> serversRemoved = new ArrayList<String>();
+	List<ClusterServer> serversAdded = new ArrayList<ClusterServer>();
         for(ClusterServer s : newConfig.getServers()){
             if(!this.peers.containsKey(s.getId()) && s.getId() != this.id){
                 serversAdded.add(s);
@@ -1039,6 +1038,7 @@ public class RaftServer implements RaftMessageHandler {
         }
 
         this.config = newConfig;
+	this.stateMachine.updateClusterConfiguration(config, serversAdded, serversRemoved);
     }
 
     private synchronized RaftResponseMessage handleExtendedMessages(RaftRequestMessage request){

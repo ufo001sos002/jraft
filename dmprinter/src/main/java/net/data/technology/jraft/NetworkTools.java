@@ -18,6 +18,7 @@ import java.util.regex.Pattern;
  * 网络相关工具包 TODO 需要添加 远程 SSH 移除 VIP的方法 以免本机程序挂了
  * /HotDB-Cloud-Management/src/main/java/cn/hotdb/cloud/pool/SSHPoolManager.java
  * /HotDB-Cloud-Management/src/main/java/cn/hotdb/cloud/util/SSHOperater.java
+ * 秘钥文件 id_rsa id_rsa.pub 要么各账号不一致 要么秘钥文件一个
  */
 public class NetworkTools {
     // /**

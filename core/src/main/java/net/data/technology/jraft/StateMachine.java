@@ -17,6 +17,7 @@
 
 package net.data.technology.jraft;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -42,6 +43,24 @@ public interface StateMachine {
      *            节点状态 0 为在线 1为离线
      */
     public void notifyServerStatus(String hcsId, int status);
+
+    /**
+     * 当前节点被集群移除
+     */
+    public void removeFromCluster();
+
+    /**
+     * 当前集群配置变更
+     * 
+     * @param newConfig
+     *            最新配置
+     * @param serversAdded
+     *            追加的集群节点 not null
+     * @param serversRemoved
+     *            删除的节点 not null
+     */
+    public void updateClusterConfiguration(ClusterConfiguration newConfig, List<ClusterServer> serversAdded,
+	    List<String> serversRemoved);
 
     /**
      * Starts the state machine, called by RaftConsensus, RaftConsensus will

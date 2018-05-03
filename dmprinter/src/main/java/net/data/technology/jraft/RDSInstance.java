@@ -171,5 +171,15 @@ public class RDSInstance {
 	return rdsInstance;
     }
 
+    /**
+     * 关闭实例连接
+     * 
+     * @param reason
+     */
+    public void closeConnection(String reason) {
+	for (FrontendConnection conn : frontendConnMap.values()) {
+	    conn.close(reason);
+	}
+    }
 }
 

@@ -19,6 +19,7 @@ package net.data.technology.jraft;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  * Cluster server configuration a class to hold the configuration information
@@ -48,6 +49,22 @@ public class ClusterServer {
      * 集群Server 终端字符串 格式：tcp://localhost:9003
      */
     private String endpoint;
+    /**
+     * 是否使用私钥 true 使用
+     */
+    private boolean isUsedPrvkey;
+    /**
+     * 服务器 用户名 远程ssh登录用的信息
+     */
+    private String userName;
+    /**
+     * 认证的私钥文件内容(如果为null 则默认使用本地id_rsa私钥文件内容)
+     */
+    private byte[] prvkeyFileContent;
+    /**
+     * 登录用户密码或私钥密码(密文密码需使用id转换)
+     */
+    private String password;
 
     /**
      * 
@@ -83,7 +100,7 @@ public class ClusterServer {
      * </p>
      * 
      * @param buffer
-     *            数组[格式：length|id|length|data]
+     *            数组[格式：length|id|length|endpoint|isUsedPrvkey|length|userName|length|prvkeyFileContent|length|password]
      */
     public ClusterServer(ByteBuffer buffer){
 	int dataSize = buffer.getInt();
@@ -94,6 +111,29 @@ public class ClusterServer {
 	data = new byte[dataSize];
 	buffer.get(data);
 	this.endpoint = new String(data, StandardCharsets.UTF_8);
+	if (buffer.hasRemaining()) {
+	    this.isUsedPrvkey = buffer.get() == 1;
+	}
+	if (buffer.remaining() >= Integer.BYTES) {
+	    dataSize = buffer.getInt();
+	    if (dataSize > 0 && buffer.remaining() >= dataSize) {
+		data = new byte[dataSize];
+		buffer.get(data);
+		if (isUsedPrvkey) {
+		    this.prvkeyFileContent = data;
+		} else {
+		    this.userName = new String(data, StandardCharsets.UTF_8);
+		}
+	    }
+	}
+	if (buffer.remaining() >= Integer.BYTES) {
+	    dataSize = buffer.getInt();
+	    if (dataSize > 0 && buffer.remaining() >= dataSize) {
+		data = new byte[dataSize];
+		buffer.get(data);
+		this.password = new String(data, StandardCharsets.UTF_8);
+	    }
+	}
     }
 
     /**
@@ -126,18 +166,47 @@ public class ClusterServer {
 
     /**
      * Serialize a server configuration to binary data <br/>
-     * 序列化服务配置 至 字节 数组[格式：id|length|data]
+     * 序列化服务配置 至 字节 数组<br>
+     * [格式：length|id|length|endpoint|isUsedPrvkey|length|userName|length|prvkeyFileContent|length|password]
      * 
-     * @return the binary data that represents the server configuration 服务器配置字节数组形式
+     * @return the binary data that represents the server configuration
+     *         服务器配置字节数组形式
      */
     public byte[] toBytes(){
 	byte[] idData = this.id.getBytes(StandardCharsets.UTF_8);
         byte[] endpointData = this.endpoint.getBytes(StandardCharsets.UTF_8);
-	ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES * 2 + idData.length + endpointData.length);
+	int bufferLength = Integer.BYTES * 2 + idData.length + endpointData.length;
+	byte[] data = null;
+	if (this.userName != null) {
+	    data = this.userName.getBytes(StandardCharsets.UTF_8);
+	}
+	if (this.prvkeyFileContent != null) {
+	    data = this.prvkeyFileContent;
+	}
+	byte[] passwordData = null;
+	if (data != null) {
+	    bufferLength += Byte.BYTES + Integer.BYTES + data.length;
+	    if (this.password != null) {
+		passwordData = this.password.getBytes(StandardCharsets.UTF_8);
+		bufferLength += Integer.BYTES + passwordData.length;
+	    }
+	}
+	ByteBuffer buffer = ByteBuffer.allocate(bufferLength);
 	buffer.putInt(idData.length);
 	buffer.put(idData);
         buffer.putInt(endpointData.length);
         buffer.put(endpointData);
+	if (data != null) {
+	    buffer.put((byte) (this.isUsedPrvkey ? 1 : 0));
+	    buffer.putInt(data.length);
+	    if (data.length > 0) {
+		buffer.put(data);
+	    }
+	    buffer.putInt(passwordData.length);
+	    if (passwordData != null && passwordData.length > 0) {
+		buffer.put(passwordData);
+	    }
+	}
         return buffer.array();
     }
 
@@ -148,7 +217,69 @@ public class ClusterServer {
      */
     @Override
     public String toString() {
-        return "ClusterServer [id=" + id + ", endpoint=" + endpoint + "]";
+	return "ClusterServer [id=" + id + ", endpoint=" + endpoint + ", isUsedPrvkey=" + isUsedPrvkey + ", userName="
+		+ userName + ", prvkeyFileContent=" + Arrays.toString(prvkeyFileContent) + ", password=" + password
+		+ "]";
+    }
+
+    /**
+     * @return {@link #isUsedPrvkey} 的值
+     */
+    public boolean isUsedPrvkey() {
+	return isUsedPrvkey;
+    }
+
+    /**
+     * @param isUsedPrvkey
+     *            根据 isUsedPrvkey 设置 {@link #isUsedPrvkey}的值
+     */
+    public void setUsedPrvkey(boolean isUsedPrvkey) {
+	this.isUsedPrvkey = isUsedPrvkey;
+    }
+
+    /**
+     * @return {@link #userName} 的值
+     */
+    public String getUserName() {
+	return userName;
+    }
+
+    /**
+     * @param userName
+     *            根据 userName 设置 {@link #userName}的值
+     */
+    public void setUserName(String userName) {
+	this.userName = userName;
+    }
+
+    /**
+     * @return {@link #prvkeyFileContent} 的值
+     */
+    public byte[] getPrvkeyFileContent() {
+	return prvkeyFileContent;
+    }
+
+    /**
+     * @param prvkeyFileContent
+     *            根据 prvkeyFileContent 设置 {@link #prvkeyFileContent}的值
+     */
+    public void setPrvkeyFileContent(byte[] prvkeyFileContent) {
+	this.prvkeyFileContent = prvkeyFileContent;
+    }
+
+    /**
+     * @return {@link #password} 的值
+     */
+    public String getPassword() {
+	return password;
+    }
+
+    /**
+     * @param password
+     *            根据 password 设置 {@link #password}的值
+     */
+    public void setPassword(String password) {
+	this.password = password;
     }
 
 }

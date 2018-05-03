@@ -621,7 +621,6 @@ public class MessagePrinter implements StateMachine {
      */
     @Override
     public void notifyServerRole(ServerRole serverRole) {
-	// TODO Auto-generated method stub
 
     }
 
@@ -634,6 +633,29 @@ public class MessagePrinter implements StateMachine {
      */
     @Override
     public void notifyServerStatus(String hcsId, int status) {
+
+    }
+
+    /**
+     * 
+     * @param newConfig
+     * @param serversAdded
+     * @param serversRemoved
+     * @see net.data.technology.jraft.StateMachine#updateClusterConfiguration(net.data.technology.jraft.ClusterConfiguration,
+     *      java.util.List, java.util.List)
+     */
+    @Override
+    public void updateClusterConfiguration(ClusterConfiguration newConfig, List<ClusterServer> serversAdded,
+	    List<String> serversRemoved) {
+
+    }
+
+    /**
+     * 
+     * @see net.data.technology.jraft.StateMachine#removeFromCluster()
+     */
+    @Override
+    public void removeFromCluster() {
 	// TODO Auto-generated method stub
 
     }

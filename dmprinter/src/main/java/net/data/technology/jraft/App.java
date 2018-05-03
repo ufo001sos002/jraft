@@ -142,8 +142,12 @@ public class App
 
 		if (values.size() == 3) { // TODO JSON 字符串 增加服务器
 		    ClusterServer server = new ClusterServer();
-		    server.setEndpoint(values.get(2));
 		    server.setId(values.get(1));
+		    server.setEndpoint(values.get(2));
+		    if (values.size() > 4) {
+			server.setUserName(values.get(3));
+			server.setPassword(values.get(4));
+		    }
 		    boolean accepted = client.addServer(server).get();
 		    System.out.println("Accepted: " + String.valueOf(accepted));
 		    continue;
