@@ -356,6 +356,13 @@ public class MessagePrinter implements StateMachine {
         System.exit(code);
     }
 
+    /**
+     * 从文件流中 获取填满 buffer 的数据
+     * 
+     * @param stream
+     * @param buffer
+     * @return
+     */
     private static int read(RandomAccessFile stream, byte[] buffer){
         try{
             int offset = 0;

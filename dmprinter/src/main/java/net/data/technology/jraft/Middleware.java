@@ -1,10 +1,14 @@
 package net.data.technology.jraft;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +28,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import org.apache.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -487,7 +490,7 @@ public class Middleware implements StateMachine {
      * @return not null
      */
     public Tuple2<Integer, String> handleServerConfig(HCSClusterAllConfig hcsClusterAllConfig) {
-	synchronized (this) {
+	synchronized (this) { // TODO 根据 该JSON对象 进行初始化 需考虑
 	    if (startupComplete.get()) {
 		return new Tuple2<Integer, String>(MsgSign.SUCCESS_CODE, "ok");
 	    }
@@ -1020,7 +1023,7 @@ public class Middleware implements StateMachine {
 	    }
 
 	}
-	// TODO 后续协议填入补充
+	// todo 后续协议填入补充
 
     }
 
@@ -1047,6 +1050,49 @@ public class Middleware implements StateMachine {
     }
 
     /**
+     * 定期将收到的配置写入 文件<br>
+     * <b>注：可能每次收到的配置应用成功后 才写入快照中，未应用成功的将不写入，但是记录最新commit了的值</b>
+     */
+    @Override
+    public CompletableFuture<Boolean> createSnapshot(Snapshot snapshot) {
+	if (snapshot.getLastLogIndex() > this.commitIndex) {
+	    return CompletableFuture.completedFuture(false);
+	}
+	final String hcsClusterAllConfigJSONStr;
+	synchronized (this) {
+	    if (this.snapshotInprogress) {
+		return CompletableFuture.completedFuture(false);
+	    }
+	    this.snapshotInprogress = true;
+	    hcsClusterAllConfigJSONStr = this.hcsClusterAllConfig.toString();
+	}
+	return CompletableFuture.supplyAsync(() -> {
+	    Path filePath = getSnapshotDirectoryPath()
+		    .resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
+	    try {
+		if (!Files.exists(filePath)) {
+		    Files.write(getSnapshotDirectoryPath().resolve(String.format("%d.cnf", snapshot.getLastLogIndex())),
+			    snapshot.getLastConfig().toBytes(), StandardOpenOption.CREATE);
+		}
+		if (hcsClusterAllConfigJSONStr != null) {
+		    FileOutputStream stream = new FileOutputStream(filePath.toString());
+		    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream, SYSTEM_CHARSET));
+		    writer.write(hcsClusterAllConfigJSONStr);
+		    writer.flush();
+		    writer.close();
+		    stream.close();
+		}
+		synchronized (this) {
+		    this.snapshotInprogress = false;
+		}
+		return true;
+	    } catch (Exception error) {
+		throw new RuntimeException(error.getMessage());
+	    }
+	});
+    }
+
+    /**
      * 保存快照数据(From Leader)
      * 
      * @see net.data.technology.jraft.StateMachine#saveSnapshotData(net.data.technology.jraft.Snapshot,
@@ -1054,8 +1100,21 @@ public class Middleware implements StateMachine {
      */
     @Override
     public void saveSnapshotData(Snapshot snapshot, long offset, byte[] data) {
-	// TODO Auto-generated method stub
+	Path filePath = getSnapshotDirectoryPath()
+		.resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
+	try {
+	    if (!Files.exists(filePath)) {
+		Files.write(getSnapshotDirectoryPath().resolve(String.format("%d.cnf", snapshot.getLastLogIndex())),
+			snapshot.getLastConfig().toBytes(), StandardOpenOption.CREATE);
+	    }
 
+	    RandomAccessFile snapshotFile = new RandomAccessFile(filePath.toString(), "rw");
+	    snapshotFile.seek(offset);
+	    snapshotFile.write(data);
+	    snapshotFile.close();
+	} catch (Exception error) {
+	    throw new RuntimeException(error.getMessage());
+	}
     }
 
     /**
@@ -1065,20 +1124,83 @@ public class Middleware implements StateMachine {
      */
     @Override
     public boolean applySnapshot(Snapshot snapshot) {
-	// TODO Auto-generated method stub
-	return false;
+	Path filePath = getSnapshotDirectoryPath()
+		.resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
+	if (!Files.exists(filePath)) {
+	    return false;
+	}
+
+	try {
+	    FileInputStream input = new FileInputStream(filePath.toString());
+	    InputStreamReader reader = new InputStreamReader(input, SYSTEM_CHARSET);
+	    BufferedReader bufferReader = new BufferedReader(reader);
+	    String hcsClusterAllConfigJSONStr = null;
+	    synchronized (this) {
+		String line = null;
+		if ((line = bufferReader.readLine()) != null) {
+		    if (line.length() > 0) {
+			hcsClusterAllConfigJSONStr = line;
+		    }
+		}
+
+		this.commitIndex = snapshot.getLastLogIndex();
+	    }
+	    hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(hcsClusterAllConfigJSONStr);
+	    // TODO 通用init方法 ：start时加载调用一次，此时也加载一次 调用一次 ，方法内容根据 hcsClusterAllConfig 进行初始化
+	    bufferReader.close();
+	    reader.close();
+	    input.close();
+	} catch (Exception error) {
+	    logger.error("failed to apply the snapshot", error);
+	    return false;
+	}
+	return true;
     }
 
     /**
-     * 读取快照数据 用于 Send 刚起的 Follower
+     * 从文件流中 获取填满 buffer 的数据
+     * 
+     * @param stream
+     * @param buffer
+     * @return
+     */
+    private static int read(RandomAccessFile stream, byte[] buffer) {
+	try {
+	    int offset = 0;
+	    int bytesRead = 0;
+	    while (offset < buffer.length && (bytesRead = stream.read(buffer, offset, buffer.length - offset)) != -1) {
+		offset += bytesRead;
+	    }
+	    return offset;
+	} catch (IOException exception) {
+	    return -1;
+	}
+    }
+
+    /**
+     * 读取快照数据 用于 Leader 发送 刚起的 Follower
      * 
      * @see net.data.technology.jraft.StateMachine#readSnapshotData(net.data.technology.jraft.Snapshot,
      *      long, byte[])
      */
     @Override
     public int readSnapshotData(Snapshot snapshot, long offset, byte[] buffer) {
-	// TODO Auto-generated method stub
-	return 0;
+	Path filePath = getSnapshotDirectoryPath()
+		.resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
+	if (!Files.exists(filePath)) {
+	    return -1;
+	}
+
+	try {
+	    RandomAccessFile snapshotFile = new RandomAccessFile(filePath.toString(), "rw");
+	    snapshotFile.seek(offset);
+	    int bytesRead = read(snapshotFile, buffer);
+	    snapshotFile.close();
+	    return bytesRead;
+	} catch (Exception error) {
+	    logger.error("failed read data from snapshot", error);
+	    return -1;
+	}
     }
 
     /**
@@ -1118,53 +1240,11 @@ public class Middleware implements StateMachine {
 		return new Snapshot(maxLastLogIndex, term, config, latestSnapshot.toFile().length());
 	    }
 	} catch (Exception error) {
-	    LogManager.getLogger(getClass()).error("failed read snapshot info snapshot store", error);
+	    logger.error("failed read snapshot info snapshot store", error);
 	}
 	return null;
     }
 
-    /**
-     * 定期将收到的配置写入 文件<br>
-     * <b>注：可能每次收到的配置应用成功后 才写入快照中，未应用成功的将不写入，但是记录最新commit了的值</b>
-     */
-    @Override
-    public CompletableFuture<Boolean> createSnapshot(Snapshot snapshot) {
-	if (snapshot.getLastLogIndex() > this.commitIndex) {
-	    return CompletableFuture.completedFuture(false);
-	}
-	final String hcsClusterAllConfigJSONStr;
-	synchronized (this.hcsClusterAllConfig) {
-	    if (this.snapshotInprogress) {
-		return CompletableFuture.completedFuture(false);
-	    }
-	    this.snapshotInprogress = true;
-	    hcsClusterAllConfigJSONStr = this.hcsClusterAllConfig.toString();
-	}
-	return CompletableFuture.supplyAsync(() -> {
-	    Path filePath = getSnapshotDirectoryPath()
-		    .resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
-	    try {
-		if (!Files.exists(filePath)) {
-		    Files.write(getSnapshotDirectoryPath().resolve(String.format("%d.cnf", snapshot.getLastLogIndex())),
-			    snapshot.getLastConfig().toBytes(), StandardOpenOption.CREATE);
-		}
-		if (hcsClusterAllConfigJSONStr != null) {
-		    FileOutputStream stream = new FileOutputStream(filePath.toString());
-		    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream, StandardCharsets.UTF_8));
-		    writer.write(hcsClusterAllConfigJSONStr);
-		    writer.flush();
-		    writer.close();
-		    stream.close();
-		}
-		synchronized (this.hcsClusterAllConfig) {
-		    this.snapshotInprogress = false;
-		}
-		return true;
-	    } catch (Exception error) {
-		throw new RuntimeException(error.getMessage());
-	    }
-	});
-    }
 
     /**
      * 中间件故障 不提供服务 发送完对应通知之后 JVM退出
@@ -1174,7 +1254,8 @@ public class Middleware implements StateMachine {
      */
     @Override
     public void exit(int code) {
-	// TODO Auto-generated method stub
+	logger.warn("StateMachine exit: %d\n", code);
+	System.exit(code);
 
     }
 
@@ -1210,7 +1291,7 @@ public class Middleware implements StateMachine {
 	if (StateMachine.STATUS_OFFLINE == status) { // 不在线 则移除 上面所有实例
 	    ArrayList<String> addRdss = new ArrayList<String>();
 	    for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
-		if (hcsId.equals(rdsAllocation.getRdsIds())) {
+		if (hcsId.equals(rdsAllocation.getHcsId())) {
 		    addRdss.addAll(rdsAllocation.getRdsIds());
 		}
 	    }
@@ -1375,7 +1456,7 @@ public class Middleware implements StateMachine {
 	ArrayList<String> addRdss = new ArrayList<String>();
 	for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
 	    for (String hcsId : serversRemoved) {
-		if (hcsId.equals(rdsAllocation.getRdsIds())) {
+		if (hcsId.equals(rdsAllocation.getHcsId())) {
 //		    removeRdsAllocations.add(rdsAllocation);
 		    addRdss.addAll(rdsAllocation.getRdsIds());
 		}
