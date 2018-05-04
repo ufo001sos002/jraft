@@ -15,24 +15,30 @@
 		   "ip": "192.168.200.215", // 集群 hcs节点 IP
 		   "port":9001, // 集群hcs 节点 Raft通讯端口
 		   "status":0, // 服务器状态: 0为在线可用(默认), 1为离线
+		   "isUsedPrvkey":false,//是否使用私钥 true 使用
 		   "userName":'root',// 服务器 用户名 远程ssh登录用的信息
-		   "passord":"123456"// 服务器 密码
+		   "prvkeyFileContent":"AwABAgM=" ,// 对应byte[] 数组对象 ，认证的私钥文件内容(如果为null 则默认使用本地id_rsa私钥文件内容)
+		   "passord":"123456"// 登录用户密码或私钥密码(密文密码需使用id转换)   
  	   },
 	   {
 		   "hcsId": "2",
 		   "ip": "192.168.200.215",
 		   "port":9002,
 		   "status":0,
+		   "isUsedPrvkey":false,
 		   "userName":'root',
-		   "userPassord":"123456"
+		   "prvkeyFileContent":"AwABAgM=" ,
+		   "passord":"123456"
 	   },
 	   {
 		   "hcsId": "3", 
 		   "ip": "192.168.200.215", 
 		   "port":9003,
 		   "status":0,
+		   "isUsedPrvkey":false,
 		   "userName":'root',
-		   "userPassord":"123456"
+		   "prvkeyFileContent":"AwABAgM=" ,
+		   "passord":"123456"
 	   }
 	]
 	,

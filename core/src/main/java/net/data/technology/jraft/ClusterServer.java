@@ -17,9 +17,12 @@
 
 package net.data.technology.jraft;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Cluster server configuration a class to hold the configuration information
@@ -49,6 +52,10 @@ public class ClusterServer {
      * 集群Server 终端字符串 格式：tcp://localhost:9003
      */
     private String endpoint;
+    /**
+     * 集群hcs 节点 ssh通讯端口
+     */
+    private Integer sshPort;
     /**
      * 是否使用私钥 true 使用
      */
@@ -100,7 +107,7 @@ public class ClusterServer {
      * </p>
      * 
      * @param buffer
-     *            数组[格式：length|id|length|endpoint|isUsedPrvkey|length|userName|length|prvkeyFileContent|length|password]
+     *            数组[格式：length|id|length|endpoint|sshPort|isUsedPrvkey|length|userName|length|prvkeyFileContent|length|password]
      */
     public ClusterServer(ByteBuffer buffer){
 	int dataSize = buffer.getInt();
@@ -111,8 +118,15 @@ public class ClusterServer {
 	data = new byte[dataSize];
 	buffer.get(data);
 	this.endpoint = new String(data, StandardCharsets.UTF_8);
+	if (buffer.remaining() >= Integer.BYTES) {
+	    this.sshPort = buffer.getInt();
+	} else {
+	    return;
+	}
 	if (buffer.hasRemaining()) {
 	    this.isUsedPrvkey = buffer.get() == 1;
+	} else {
+	    return;
 	}
 	if (buffer.remaining() >= Integer.BYTES) {
 	    dataSize = buffer.getInt();
@@ -125,6 +139,8 @@ public class ClusterServer {
 		    this.userName = new String(data, StandardCharsets.UTF_8);
 		}
 	    }
+	} else {
+	    return;
 	}
 	if (buffer.remaining() >= Integer.BYTES) {
 	    dataSize = buffer.getInt();
@@ -163,11 +179,61 @@ public class ClusterServer {
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
     }
+    
+    /**
+     * 返回IP
+     * 
+     * @return
+     * @throws Exception
+     * @ 析失败
+     */
+    public String getIp() {
+	String ip = null;
+	try {
+	    URI uri = new URI(this.endpoint);
+	    ip = uri.getHost();
+	} catch (Exception e) {
+	    // TODO 日志输出
+	    e.printStackTrace();
+	}
+	if (ip == null) {
+	    Matcher m = Pattern.compile("tcp://(\\S+):(\\d*+)").matcher(this.endpoint);
+	    if (m.find()) {
+		ip = m.group(1);
+	    }
+	}
+	return ip;
+    }
+
+    /**
+     * 返回Raft port
+     * 
+     * @return
+     * @throws Exception
+     * @ 析失败
+     */
+    public int getRaftPort() {
+	int port = -1;
+	try {
+	    URI uri = new URI(this.endpoint);
+	    port = uri.getPort();
+	} catch (Exception e) {
+	    // TODO 日志输出
+	    e.printStackTrace();
+	}
+	if (port <= 0) {
+	    Matcher m = Pattern.compile("tcp://(\\S+):(\\d*+)").matcher(this.endpoint);
+	    if (m.find()) {
+		port = Integer.parseInt(m.group(2));
+	    }
+	}
+	return port;
+    }
 
     /**
      * Serialize a server configuration to binary data <br/>
      * 序列化服务配置 至 字节 数组<br>
-     * [格式：length|id|length|endpoint|isUsedPrvkey|length|userName|length|prvkeyFileContent|length|password]
+     * [格式：length|id|length|endpoint|sshPort|isUsedPrvkey|length|userName|length|prvkeyFileContent|length|password]
      * 
      * @return the binary data that represents the server configuration
      *         服务器配置字节数组形式
@@ -191,11 +257,17 @@ public class ClusterServer {
 		bufferLength += Integer.BYTES + passwordData.length;
 	    }
 	}
+	if (this.sshPort != null) {
+	    bufferLength += Integer.BYTES;
+	}
 	ByteBuffer buffer = ByteBuffer.allocate(bufferLength);
 	buffer.putInt(idData.length);
 	buffer.put(idData);
         buffer.putInt(endpointData.length);
         buffer.put(endpointData);
+	if (this.sshPort != null) {
+	    buffer.putInt(this.sshPort);
+	}
 	if (data != null) {
 	    buffer.put((byte) (this.isUsedPrvkey ? 1 : 0));
 	    buffer.putInt(data.length);
@@ -217,9 +289,23 @@ public class ClusterServer {
      */
     @Override
     public String toString() {
-	return "ClusterServer [id=" + id + ", endpoint=" + endpoint + ", isUsedPrvkey=" + isUsedPrvkey + ", userName="
+	return "ClusterServer [id=" + id + ", endpoint=" + endpoint + ", sshPort=" + sshPort + ", isUsedPrvkey=" + isUsedPrvkey + ", userName="
 		+ userName + ", prvkeyFileContent=" + Arrays.toString(prvkeyFileContent) + ", password=" + password
 		+ "]";
+    }
+
+    /**
+     * @return {@link #sshPort} 的值
+     */
+    public Integer getSshPort() {
+        return sshPort;
+    }
+
+    /**
+     * @param sshPort 根据 sshPort 设置 {@link #sshPort}的值
+     */
+    public void setSshPort(Integer sshPort) {
+        this.sshPort = sshPort;
     }
 
     /**

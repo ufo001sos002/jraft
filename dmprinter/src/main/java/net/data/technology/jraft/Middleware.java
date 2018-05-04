@@ -1,20 +1,30 @@
 package net.data.technology.jraft;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import org.apache.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,7 +126,7 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * (考虑 ： Leader是通过HCM_S_S 还是HCM_S_R通道告知HCM 节点故障，故障节点HCM_S_S通道未发送心跳也代表故障,但担心仅此通道异常而已，还需Leader再发送一次确认)
  * 、TODO 其他节点的JSON  针对该节点的 所有 分配全部置空
  * 
- * 某个集群节点重启：
+ * 某个集群节点重启：// 把之前监管实例的 VIP 全部移除
  * 、与添加集群节点一致，HCM挂了 则超时即 应用本地配置(就算本地配置中有 该节点的 分配配置  但状态机不应用 分配配置)
  * 私有配置在 HCM_S_S通道可用(尝试重连，和之前SSLSocket一致)之后，从新拿配置(对比 私有配置 部分不同的进行变更操作)
  * 
@@ -141,6 +151,10 @@ public class Middleware implements StateMachine {
      * 集群配置文件夹名( {@ #CONFIG_FOLDER_NAME} 文件夹下)
      */
     public static final String CLUSTER_FOLDER_NAME = "cluster";
+    /**
+     * 集群配置文件夹名( {@ #CLUSTER_FOLDER_NAME} 文件夹下)
+     */
+    public static final String SNAPSHOTS_FOLDER_NAME = "snapshots";
     /**
      * 本地配置文件名(conf文件夹下)
      */
@@ -188,10 +202,13 @@ public class Middleware implements StateMachine {
     private SSLClient sslClient = null;
 
     /**
-     * 集群配置文件目录对象(由 {@link #SYS_HOME}{@link #CONFIG_FOLDER_NAME}
-     * {@link #CLUSTER_FOLDER_NAME}) 组合
+     * 集群配置文件目录对象(由 {@link #SYS_HOME}/{@link #CONFIG_FOLDER_NAME}/{@link #CLUSTER_FOLDER_NAME} 组合)
      */
     public static volatile Path clusterDirectoryPath = null;
+    /**
+     * 集群快照文件目录对象(由 {@link #SYS_HOME}/{@link #CONFIG_FOLDER_NAME}/{@link #CLUSTER_FOLDER_NAME}/{@link #SNAPSHOTS_FOLDER_NAME} 组合)
+     */
+    public static volatile Path snapshotsDirectoryPath = null;
     /**
      * 全局配置JSON对象(集群启动后 not null)
      */
@@ -214,6 +231,11 @@ public class Middleware implements StateMachine {
      */
     private List<ClusterServer> servers = null;
     /**
+     * 节点状态 K: hcsId V:状态值 参照 {@link StateMachine#STATUS_ONLINE} /
+     * {@link StateMachine#STATUS_OFFLINE}
+     */
+    private HashMap<String, Integer> serverStatusMap = new HashMap<String, Integer>();
+    /**
      * 当前集群分配索引
      */
     private int index = 0;
@@ -222,7 +244,7 @@ public class Middleware implements StateMachine {
      */
     private HashMap<String, RdsAllocation> rdsAllocationMap = new HashMap<String, RdsAllocation>();
     /**
-     * K：实例ID V：实例JSON对象 TODO 启动时加载本地
+     * K：实例ID V：实例JSON对象 TODO 启动(创建快照时)加载本地
      */
     private HashMap<String, RDSInstanceInfo> rdsInstanceInfoMap = new HashMap<String, RDSInstanceInfo>();
     /**
@@ -233,6 +255,15 @@ public class Middleware implements StateMachine {
      * 集群配置
      */
     private ClusterConfiguration config = null;
+
+    /**
+     * 提交索引
+     */
+    private volatile long commitIndex;
+    /**
+     * 正在创建快照
+     */
+    private boolean snapshotInprogress = false;
 
     /**
      * 根据参数构造 类{@link Middleware} 对象
@@ -395,6 +426,22 @@ public class Middleware implements StateMachine {
     }
 
     /**
+     * 
+     * 
+     * @return 集群快照文件目录对象(not null)
+     */
+    public static Path getSnapshotDirectoryPath() {
+	if (snapshotsDirectoryPath == null) {
+	    synchronized (CLUSTER_FOLDER_NAME) {
+		if (snapshotsDirectoryPath == null) {
+		    snapshotsDirectoryPath = getClusterDirectoryPath().resolve(SNAPSHOTS_FOLDER_NAME);
+		}
+	    }
+	}
+	return snapshotsDirectoryPath;
+    }
+
+    /**
      * 保存配置文件
      * 
      * @return true 保存成功
@@ -455,6 +502,9 @@ public class Middleware implements StateMachine {
 	    try {
 		this.sslClient.setHeartbeatInterval(hcsClusterAllConfig.getSystemConfig().getHeartbeatToM());
 		this.servers = config.getServers();
+		for (ClusterServer cs : servers) {
+		    serverStatusMap.put(cs.getId(), StateMachine.STATUS_ONLINE);
+		}
 		if (this.servers.isEmpty()) {
 		    return new Tuple2<Integer, String>(MsgSign.ERROR_CODE_121000, "cluster info is empty in JSON");
 		}
@@ -541,10 +591,25 @@ public class Middleware implements StateMachine {
      */
     private String getHandleServerId() {
 	synchronized (servers) {
-	    if (index == servers.size()) {
-		index = 0;
+	    String id = null;
+	    Integer status = null;
+	    int count = 0;
+	    while (id == null) {
+		count++;
+		if (index == servers.size()) {
+		    index = 0;
+		}
+		id = servers.get(index++).getId();
+		status = serverStatusMap.get(id);
+		if (status != null && StateMachine.STATUS_ONLINE == status.intValue()) {
+		    return id;
+		}
+		id = null;
+		if (count == servers.size()) {
+		    return rdsServerId;
+		}
 	    }
-	    return servers.get(index++).getId();
+	    return rdsServerId;
 	}
     }
 
@@ -815,6 +880,10 @@ public class Middleware implements StateMachine {
 		    "handleRDSInstanceAllocationChange(" + socketPacket.getDebugValue() + ") JSON info is null");
 	    return;
 	}
+	if (t_hcsClusterAllConfig.getHcsGroup() != null) {
+	    hcsClusterAllConfig.setHcsGroup(t_hcsClusterAllConfig.getHcsGroup());
+	    this.saveConfigToFile();
+	}
 	List<RdsAllocation> t_rdsAllocations = t_hcsClusterAllConfig.getRdsAllocations();
 	if (t_rdsAllocations == null || t_rdsAllocations.isEmpty()) {
 	    String msg = "handleRDSInstanceAllocationChange(" + socketPacket.getDebugValue()
@@ -862,6 +931,10 @@ public class Middleware implements StateMachine {
 			adds = t_rdsAllocation.getAdds();
 		    }
 		}
+		if (rdsIds.size() == 0) { // 最终监管实例为空 则 清除
+		    rdsAllocationMap.remove(t_rdsAllocation.getHcsId());
+		    rdsAllocations.remove(rdsAllocation);
+		}
 	    }
 	}
 	// 先追加 实例至 JSON对象并保存
@@ -870,9 +943,10 @@ public class Middleware implements StateMachine {
 	    sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
 	    return;
 	}
-	// 初始化增加的实例
+
 	RDSInstanceInfo rdsInstanceInfo = null;
 	RDSInstance rdsInstance = null;
+	// 移除 停止管控的
 	if (deletes != null) {
 	    for (String rdsId : deletes) {
 		rdsInstanceInfo = rdsInstanceInfoMap.get(rdsId);
@@ -893,6 +967,7 @@ public class Middleware implements StateMachine {
 		rdsInstance.closeConnection("rds change allocation");
 	    }
 	}
+	// 初始化增加的实例
 	if (adds != null) {
 	    for (String rdsId : adds) {
 		rdsInstanceInfo = rdsInstanceInfoMap.get(rdsId);
@@ -922,6 +997,7 @@ public class Middleware implements StateMachine {
      */
     @Override
     public void commit(long logIndex, byte[] data) {
+	this.commitIndex = logIndex;
 	SocketPacket socketPacket = new SocketPacket();
 	socketPacket.read(data);
 	if (logger.isDebugEnabled()) {
@@ -983,7 +1059,7 @@ public class Middleware implements StateMachine {
     }
 
     /**
-     * 应用快照数据(From Leader)
+     * 应用 之前保存的 快照数据(From Leader)
      * 
      * @see net.data.technology.jraft.StateMachine#applySnapshot(net.data.technology.jraft.Snapshot)
      */
@@ -1012,7 +1088,38 @@ public class Middleware implements StateMachine {
      */
     @Override
     public Snapshot getLastSnapshot() {
-	// TODO Auto-generated method stub
+	try {
+	    Stream<Path> files = Files.list(getSnapshotDirectoryPath());
+	    Path latestSnapshot = null;
+	    long maxLastLogIndex = 0;
+	    long term = 0;
+	    Pattern pattern = Pattern.compile("(\\d+)\\-(\\d+)\\.s");
+	    Iterator<Path> itor = files.iterator();
+	    while (itor.hasNext()) {
+		Path file = itor.next();
+		if (Files.isRegularFile(file)) {
+		    Matcher matcher = pattern.matcher(file.getFileName().toString());
+		    if (matcher.matches()) {
+			long lastLogIndex = Long.parseLong(matcher.group(1));
+			if (lastLogIndex > maxLastLogIndex) {
+			    maxLastLogIndex = lastLogIndex;
+			    term = Long.parseLong(matcher.group(2));
+			    latestSnapshot = file;
+			}
+		    }
+		}
+	    }
+
+	    files.close();
+	    if (latestSnapshot != null) {
+		byte[] configData = Files
+			.readAllBytes(getSnapshotDirectoryPath().resolve(String.format("%d.cnf", maxLastLogIndex)));
+		ClusterConfiguration config = ClusterConfiguration.fromBytes(configData);
+		return new Snapshot(maxLastLogIndex, term, config, latestSnapshot.toFile().length());
+	    }
+	} catch (Exception error) {
+	    LogManager.getLogger(getClass()).error("failed read snapshot info snapshot store", error);
+	}
 	return null;
     }
 
@@ -1022,8 +1129,41 @@ public class Middleware implements StateMachine {
      */
     @Override
     public CompletableFuture<Boolean> createSnapshot(Snapshot snapshot) {
-	// TODO Auto-generated method stub
-	return null;
+	if (snapshot.getLastLogIndex() > this.commitIndex) {
+	    return CompletableFuture.completedFuture(false);
+	}
+	final String hcsClusterAllConfigJSONStr;
+	synchronized (this.hcsClusterAllConfig) {
+	    if (this.snapshotInprogress) {
+		return CompletableFuture.completedFuture(false);
+	    }
+	    this.snapshotInprogress = true;
+	    hcsClusterAllConfigJSONStr = this.hcsClusterAllConfig.toString();
+	}
+	return CompletableFuture.supplyAsync(() -> {
+	    Path filePath = getSnapshotDirectoryPath()
+		    .resolve(String.format("%d-%d.s", snapshot.getLastLogIndex(), snapshot.getLastLogTerm()));
+	    try {
+		if (!Files.exists(filePath)) {
+		    Files.write(getSnapshotDirectoryPath().resolve(String.format("%d.cnf", snapshot.getLastLogIndex())),
+			    snapshot.getLastConfig().toBytes(), StandardOpenOption.CREATE);
+		}
+		if (hcsClusterAllConfigJSONStr != null) {
+		    FileOutputStream stream = new FileOutputStream(filePath.toString());
+		    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stream, StandardCharsets.UTF_8));
+		    writer.write(hcsClusterAllConfigJSONStr);
+		    writer.flush();
+		    writer.close();
+		    stream.close();
+		}
+		synchronized (this.hcsClusterAllConfig) {
+		    this.snapshotInprogress = false;
+		}
+		return true;
+	    } catch (Exception error) {
+		throw new RuntimeException(error.getMessage());
+	    }
+	});
     }
 
     /**
@@ -1064,8 +1204,92 @@ public class Middleware implements StateMachine {
 	if (this.rdsServerId.equals(hcsId)) {
 	    this.status = status;
 	}
-	// TODO 方法未埋点 并制定协议 HCM_S_S 发送HCM 状态变更
-	// TODO 实例分配的时候 需判断状态后再进行,之前需进行实例状态同步
+	serverStatusMap.put(hcsId, status);
+	// todo 方法未埋点 并制定协议 HCM_S_S 发送HCM 状态变更
+	// todo 实例分配的时候 需判断状态后再进行,之前需进行实例状态同步
+	if (StateMachine.STATUS_OFFLINE == status) { // 不在线 则移除 上面所有实例
+	    ArrayList<String> addRdss = new ArrayList<String>();
+	    for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
+		if (hcsId.equals(rdsAllocation.getRdsIds())) {
+		    addRdss.addAll(rdsAllocation.getRdsIds());
+		}
+	    }
+	    ClusterServer server = null;
+	    for (ClusterServer cs : servers) {
+		if (hcsId.equals(cs.getId())) {
+		    server = cs;
+		    break;
+		}
+	    }
+	    if(server == null) {
+		logger.error(Markers.STATEMACHINE, "hcsId:"+hcsId+" is non-existent");
+		return;
+	    }
+	    SSHOperater sshOperater = null;
+	    String ip = server.getIp();
+	    if (ip == null) {
+		logger.error(Markers.STATEMACHINE, "hcsId:" + hcsId + "  ip is non-existent");
+		return;
+	    }
+	    if(server.isUsedPrvkey()) {
+		sshOperater = SSHPoolManager.getSSHOperater(ip, server.getSshPort(), server.getUserName(), true,
+			server.getPrvkeyFileContent(), server.getPassword());
+	    } else {
+		sshOperater = SSHPoolManager.getSSHOperater(ip, server.getSshPort(), server.getUserName(),
+			server.getPassword());
+	    }
+	    RDSInstanceInfo rdsInstanceInfo = null;
+	    for (String rdsId : addRdss) {
+		rdsInstanceInfo = this.rdsInstanceInfoMap.get(rdsId);
+		if (rdsInstanceInfo != null) { // 移除VIP
+		    NetworkTools.delIpOfRemote(sshOperater, rdsInstanceInfo.getVip());
+		}
+	    }
+	    String handleId = null;
+	    ArrayList<String> adds = null;
+	    HashMap<String, ArrayList<String>> hcsAddsMap = new HashMap<String, ArrayList<String>>();
+	    for (String rdsId : addRdss) {
+		handleId = getHandleServerId();
+		adds = hcsAddsMap.get(handleId);
+		if (adds == null) {
+		    adds = new ArrayList<String>();
+		    hcsAddsMap.put(handleId, adds);
+		}
+		adds.add(rdsId);
+	    }
+	    // 生成最新的 动态分配 请求
+	    ArrayList<RdsAllocation> rdsAllocations = new ArrayList<RdsAllocation>();
+	    RdsAllocation rdsAllocation = new RdsAllocation(hcsId);
+	    rdsAllocation.setDeletes(addRdss);
+	    rdsAllocations.add(rdsAllocation);
+	    for (Entry<String, ArrayList<String>> set : hcsAddsMap.entrySet()) {
+		rdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
+	    }
+	    HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
+	    t_hcsClusterAllConfig.setTaskId("-1");
+	    t_hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	    SocketPacket socketPacket = new SocketPacket(MsgSign.TYPE_RDS_SERVER, MsgSign.RAFT_RDS_CHANGE,
+		    t_hcsClusterAllConfig.toString().getBytes(StandardCharsets.UTF_8));
+	    raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })
+		    .whenCompleteAsync((Boolean result, Throwable err) -> {
+			if (err != null) {
+			    String errMsg = "notifyServerStatus-->raftMessageSender.appendEntries("
+				    + socketPacket.getDebugValue() + ") is error:" + err.getMessage();
+			    logger.error(Markers.STATEMACHINE, errMsg, err);
+			} else if (!result) {
+			    String errMsg = "notifyServerStatus-->raftMessageSender.appendEntries("
+				    + socketPacket.getDebugValue() + ") is System rejected(" + result + ")";
+			    logger.error(Markers.STATEMACHINE, errMsg);
+			} else {
+			    if (logger.isInfoEnabled()) {
+				logger.info(Markers.STATEMACHINE,
+					"notifyServerStatus-->raftMessageSender.appendEntries("
+						+ socketPacket.getDebugValue()
+						+ ") is Accpeted, server is being added");
+			    }
+			}
+		    });
+	} // 若恢复在线 则等待后期分配 todo 后期可以考虑 未分配的实例 迁移归属
     }
 
     /**
@@ -1081,6 +1305,27 @@ public class Middleware implements StateMachine {
     }
 
     /**
+     * 根据 {@link ClusterServer} 转换 {@link HCSNode} 对象 状态：
+     * {@link StateMachine#STATUS_ONLINE}
+     * 
+     * @param clusterServer
+     * @return {@link HCSNode} 对象
+     */
+    public  HCSNode changeClusterServerToHCSNode(ClusterServer clusterServer) {
+	HCSNode node = new HCSNode();
+	node.setHcsId(clusterServer.getId());
+	node.setIp(clusterServer.getIp());
+	node.setPort(clusterServer.getRaftPort());
+	node.setStatus(StateMachine.STATUS_ONLINE);
+	node.setSshPort(clusterServer.getSshPort());
+	node.setUsedPrvkey(clusterServer.isUsedPrvkey());
+	node.setUserName(clusterServer.getUserName());
+	node.setPrvkeyFileContent(clusterServer.getPrvkeyFileContent());
+	node.setPassword(clusterServer.getPassword());
+	return node;
+    }
+
+    /**
      * 
      * @param newConfig
      * @see net.data.technology.jraft.StateMachine#updateClusterConfiguration(net.data.technology.jraft.ClusterConfiguration)
@@ -1090,6 +1335,11 @@ public class Middleware implements StateMachine {
 	    List<String> serversRemoved) {
 	this.config = newConfig;
 	List<ClusterServer> removes = new ArrayList<ClusterServer>();
+	List<HCSNode> newHCSGroup = new ArrayList<HCSNode>();
+	List<HCSNode> oldHcsGroup = hcsClusterAllConfig.getHcsGroup();
+	newHCSGroup.addAll(oldHcsGroup);
+	List<HCSNode> removeNode = new ArrayList<HCSNode>();
+	List<HCSNode> addNode = new ArrayList<HCSNode>();
 	synchronized (servers) {
 	    for (String hcsId : serversRemoved) {
 		for (ClusterServer server : servers) {
@@ -1098,27 +1348,41 @@ public class Middleware implements StateMachine {
 			continue;
 		    }
 		}
+		for (HCSNode node : oldHcsGroup) {
+		    if (hcsId.equals(node.getHcsId())) {
+			removeNode.add(node);
+			continue;
+		    }
+		}
+		serverStatusMap.remove(hcsId);
 	    }
 	    servers.removeAll(removes);
-	    servers.addAll(serversAdded);
+	    for (ClusterServer cs : serversAdded) {
+		servers.add(cs);
+		serverStatusMap.put(cs.getId(), StateMachine.STATUS_ONLINE);
+		addNode.add(changeClusterServerToHCSNode(cs));
+	    }
+	    newHCSGroup.removeAll(removeNode);
+	    newHCSGroup.addAll(addNode);
 	}
+
 	// todo 考虑 变更JSON配置文件 this.hcsClusterAllConfig 增加删除时 均以任务形式返回HCM
-	if (serversRemoved.size() <= 0) {
+	if (serversRemoved.size() <= 0 && serversAdded.size() <= 0) {
 	    return;
 	}
-	// 每个节点清除老的分配内容
-	ArrayList<RdsAllocation> removeRdsAllocations = new ArrayList<RdsAllocation>();
+	// 获取老的节点分配内容，按理是不需要 在这里清除的，先保留代码
+//	ArrayList<RdsAllocation> removeRdsAllocations = new ArrayList<RdsAllocation>();
 	ArrayList<String> addRdss = new ArrayList<String>();
 	for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
 	    for (String hcsId : serversRemoved) {
 		if (hcsId.equals(rdsAllocation.getRdsIds())) {
-		    removeRdsAllocations.add(rdsAllocation);
+//		    removeRdsAllocations.add(rdsAllocation);
 		    addRdss.addAll(rdsAllocation.getRdsIds());
 		}
 	    }
 	}
-	this.hcsClusterAllConfig.getRdsAllocations().removeAll(removeRdsAllocations);
-	this.saveConfigToFile(); // 保存最新配置
+//	this.hcsClusterAllConfig.getRdsAllocations().removeAll(removeRdsAllocations);
+//	this.saveConfigToFile(); // 保存最新配置
 	if (this.serverRole != ServerRole.Leader) {
 	    return;
 	}
@@ -1143,6 +1407,7 @@ public class Middleware implements StateMachine {
 	HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
 	t_hcsClusterAllConfig.setTaskId("-1");
 	t_hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	t_hcsClusterAllConfig.setHcsGroup(newHCSGroup);
 	SocketPacket socketPacket = new SocketPacket(MsgSign.TYPE_RDS_SERVER, MsgSign.RAFT_RDS_CHANGE,
 		t_hcsClusterAllConfig.toString().getBytes(StandardCharsets.UTF_8));
 	raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })

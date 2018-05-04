@@ -48,7 +48,8 @@ public interface StateMachine {
      * @param hcsId
      *            节点id
      * @param status
-     *            节点状态 0 为在线 1为离线
+     *            节点状态 0 为在线( {@link #STATUS_ONLINE} ) 1为离线(
+     *            {@link #STATUS_OFFLINE})
      */
     public void notifyServerStatus(String hcsId, int status);
 

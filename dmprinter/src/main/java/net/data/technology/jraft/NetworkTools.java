@@ -3,6 +3,7 @@ package net.data.technology.jraft;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.ArrayList;
@@ -383,6 +384,140 @@ public class NetworkTools {
 	    }
 	}
 	if (delIpByCommand(vip, deviceName)) { // 解除VIP绑定
+	    if (pingIp(vip, 1000)) { // ping vip 是否成功
+		return -1; // 解除绑定VIP失败
+	    } else {
+		return 1;// 解除绑定成功
+	    }
+	}
+	return -1;
+    }
+    
+    /**
+     * 远程根据ip地址返回 所在 网卡名称,如IP 不存在 则返回null
+     * 
+     * @param sshOperater
+     *            ssh连接对象
+     * @param ip
+     *            需返回网卡名称的 IP
+     * @return null 表示Ip未被绑定
+     */
+    public static String getIpDeviceOfRemote(SSHOperater sshOperater, String ip) {
+	try {
+	    ResInfo resInfo = sshOperater.executeSudoCmd("ip addr", 0);
+	    if (resInfo != null) {
+		if (resInfo.isSuccess()) {
+		    BufferedReader in = new BufferedReader(new StringReader(resInfo.getOutRes()));
+		    String line = null;
+		    Pattern devPattern = Pattern.compile("(\\d{1})\\:(\\s+)(\\S+)\\:(.*)");// 3  dev
+		    Pattern ipPattern = Pattern.compile("(\\s+)inet(\\s{1})(\\S+)/(.*)"); // 3 ip
+		    Matcher matcher = null;
+		    HashMap<String, ArrayList<String>> devIpMap = new HashMap<String, ArrayList<String>>();
+		    String dev = null;
+		    String devIp = null;
+		    ArrayList<String> ips = null;
+		    while ((line = in.readLine()) != null) {
+			matcher = devPattern.matcher(line);
+			if (matcher.find()) {
+			    dev = matcher.group(3);
+			    ips = devIpMap.get(dev);
+			    if (ips == null) {
+				ips = new ArrayList<String>();
+				devIpMap.put(dev, ips);
+			    }
+			    continue;
+			}
+			matcher = ipPattern.matcher(line);
+			if (matcher.find()) {
+			    devIp = matcher.group(3);
+			    if (ips != null) {
+				ips.add(devIp.trim());
+			    }
+			}
+			}
+		    for (Entry<String, ArrayList<String>> entry : devIpMap.entrySet()) {
+			ips = entry.getValue();
+			for (String t_ip : ips) {
+			    if (ip.equals(t_ip)) {
+				return entry.getKey();
+			    }
+			}
+			}
+		} else {
+		    // logger.warn("remote run 'ip addr' is error:" +  resInfo.getErrRes());
+		    System.err.println("remote run 'ip addr' is error:" + resInfo.getErrRes());
+		}
+	    }
+	} catch (Exception e) {
+	    // logger.warn("remote run 'ip addr' is error:", e);
+	    System.err.println("remote run 'ip addr' is error:" + e.getMessage());
+	    e.printStackTrace();
+	}
+	return null;
+    }
+
+    /**
+     * 远程 通过命令ip addr del ip dev deviceName 命令解除网卡绑定IP<br>
+     * TODO 还需再window系统下添加 方便调试
+     * 
+     * @param sshOperater
+     *            ssh连接对象
+     * @param ip
+     *            目前仅支持ipv4 字符串
+     * @param deviceName
+     *            IP绑定的网卡名
+     * @return true 解除绑定成功 false 解除绑定失败
+     */
+    public static boolean delIpByRemoteCommand(SSHOperater sshOperater, String ip, String deviceName) {
+	try {
+	    ResInfo resInfo = sshOperater.executeSudoCmd("ip addr del " + ip + "/32, dev " + deviceName, 0);
+	    if (resInfo != null) {
+		if (resInfo.isSuccess()) {
+		    return true;
+		} else {
+		    String errorInfo = resInfo.getErrRes();
+		    if (errorInfo.toLowerCase().indexOf("file exists") > 0) {
+			// if (logger.isInfoEnabled()) {
+			// 	logger.info("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
+			// }
+			System.out.println("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
+			return true;
+		    } else {
+			// logger.warn("run 'ip addr del " + ip + "/32 dev" +  deviceName + "' is error:" + errorInfo);
+			System.err.println("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + errorInfo);
+		    }
+		}
+	    }
+	} catch (Exception e) {
+	    // logger.warn("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + e.getMessage(), e);
+	    System.err.println("run 'ip addr del " + ip + "/32 dev" + deviceName + "' is error:" + e.getMessage());
+	    e.printStackTrace();
+	}
+	return false;
+    }
+
+    /**
+     * 远程解除本机IP绑定 ；>=0表示 VIP已解绑
+     * 
+     * @param sshOperater
+     *            ssh连接对象
+     * @param vip
+     *            需解绑的IP
+     * @return 1 表示成功<br>
+     *         0 表示当前VIP未被绑定<br>
+     *         -1 表示解除失败<br>
+     *         -2 表示VIP已在其他地方被绑定<br>
+     */
+    public static int delIpOfRemote(SSHOperater sshOperater, String vip) {
+	String deviceName = getIpDeviceOfRemote(sshOperater, vip);
+	if (deviceName == null) { // 当前VIP 未绑定
+	    if (pingIp(vip,1000)) { // ping vip 是否还通
+		return -2; // 当前网卡未绑定VIP 但其他地方有绑定VIP
+	    } else {
+		return 0;// 当前网卡未绑定VIP
+	    }
+	}
+	if (delIpByRemoteCommand(sshOperater, vip, deviceName)) { // 解除VIP绑定
 	    if (pingIp(vip, 1000)) { // ping vip 是否成功
 		return -1; // 解除绑定VIP失败
 	    } else {

@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.alibaba.fastjson.JSON;
@@ -194,7 +195,18 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
      * @param args 
      */
     public static void main(String[] args) {
-
+	HCSClusterAllConfig hcs = new HCSClusterAllConfig();
+	List<HCSNode> hcsGroup = new ArrayList<HCSNode>();
+	HCSNode node = new HCSNode();
+	node.setPrvkeyFileContent(new byte[] { 3, 0, 1, 2, 3 });
+	hcsGroup.add(node);
+	hcs.setHcsGroup(hcsGroup);
+	System.out.println(hcs.toString());
+	hcs = HCSClusterAllConfig
+		.loadObjectFromJSONString("{\"hcsGroup\":[{\"prvkeyFileContent\":\"AwABAgM=\",\"usedPrvkey\":false}]}");
+	for (byte b : hcs.getHcsGroup().get(0).getPrvkeyFileContent()) {
+	    System.out.println(b);
+	}
     }
 
 }
