@@ -59,7 +59,7 @@ public interface StateMachine {
     public void removeFromCluster();
 
     /**
-     * 当前集群配置变更
+     * 当前集群配置变更(增加的同步差不多了则会通知)
      * 
      * @param newConfig
      *            最新配置

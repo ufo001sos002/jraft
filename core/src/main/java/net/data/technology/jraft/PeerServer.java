@@ -102,6 +102,10 @@ public class PeerServer {
      * 离线次数(心跳发送次数)
      */
     private AtomicInteger offlineNum = new AtomicInteger();
+    /**
+     * 离线计算有效次数
+     */
+    private int offlineValidNum = 2;
 
     /**
      * 
@@ -290,15 +294,16 @@ public class PeerServer {
                     }
 
                     this.resumeHeartbeatingSpeed();
-		    offlineNum.getAndSet(0);
-		    this.stateMachine.notifyServerStatus(this.getId(), StateMachine.STATUS_ONLINE);
+		    if (offlineNum.getAndSet(0) >= offlineValidNum) {
+			this.stateMachine.notifyServerStatus(this.getId(), StateMachine.STATUS_ONLINE);
+		    }
                     return CompletableFuture.completedFuture(response);
                 }, this.executor)
                 .exceptionally((Throwable error) -> {
                     if(isAppendRequest){
                         this.setFree();
                     }
-		    if (offlineNum.incrementAndGet() == 2) {
+		    if (offlineNum.incrementAndGet() == offlineValidNum) {
 			this.stateMachine.notifyServerStatus(this.getId(), StateMachine.STATUS_OFFLINE);
 		    }
                     this.slowDownHeartbeating();

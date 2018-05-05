@@ -41,6 +41,8 @@ import net.data.technology.jraft.jsonobj.RDSInstanceInfo;
 import net.data.technology.jraft.jsonobj.RdsAllocation;
 
 /**
+ * TODO 周一问要什么文档，好事先准备下
+ * 
  * <pre>
  * ★需要做的
  * 1、配置同步 
@@ -49,7 +51,7 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * 4、VIP 绑定 监听
  * 5、客户端连接、数据源数据直接转发
  * 6、节点之间实例服务切换(动态 或 故障)
- * 监管实例建立(数据源 数据转发)、监管实例迁移(主动或故障)、实例由集群启动初始化时下发、实例动态添加、分配、移出
+ * 监管实例建立(数据源 数据转发)、监管实例迁移(主动或故障)、实例动态添加、分配、移出、节点启动快照读取实例信息并等待分配
  * 
  * 
  * ★解决思路，可考虑：
@@ -74,6 +76,16 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * （如果拿的话，就需要考虑比对配置是否一致 主要判断 公有配置、私有配置 是否一致，是否方便变更，分配配置 由Leader 计算下发） 
  * 集群配置 仅 初次启动时 通过 HCM_S_S 应用一次(判断文件是否存在)，后续通过HCM_S_R同步、私有配置每次启动均通过HCM_S_S 拿变更
  * TODO Demo实现后，集群设计时 应考虑 负载转发 如何进行? 如何 模拟LVS，即节点可以考虑开启部分模拟LVS转发 至另一个节点处理，内部逻辑 仅做链路层包转发，还是 建立节点内部TCP通讯，转发数据包 以及回包
+ * 、TODO 节点初始启动的时候,可先调用 {@link #getLastSnapshot()} 是否存在 存在则 调用 {@link #applySnapshot(Snapshot)} 应用 并初始化，
+ * 如果不存在 则连HCM_S_S获取，如果获取失败 则判断本地是否有localConfig文件( Raft数据存储(压缩也仅为将之前的创建快照后删除)仅存储传输的(包含未提交的) 与快照无关(即不从快照读取)，
+ * 快照可能更多用来状态机自身启动时 获取应用至最新 并且留意 幂等性，之后由Raft数据存储同步commit至最新) 
+ * TODO 不单考虑启动 还需 考虑 断线又连上 的 问题 ？Leader实例怎么处理？ 失联节点 上实例 怎么处理？失联节点怎么判断是失联了(无需判断，按以下规则执行即可)？ 
+ * 答: 、无论初次 还是 故障修复后 启动时，Leader在连不上时已将节点实例分配至其他节点，并远程移除VIP，
+ *       移除成功，则失联节点VIP即失去作用；移除失败，则报错至HCM，人工干预，但同时或多次重试移除成功后再分配(或新监控节点一直重试移除再添加监听)，直至修复完成；
+ *       重连上后老的配置均失效(即VIP均不监听)，且连上后同步最新配置时则将 移除之前分配节点；并等待后续分配；
+ *     、网络问题 断了 又 连上问题， Leader在连不上时已将节点实例分配至其他节点，并远程移除VIP，
+ *     移除成功，则失联节点VIP即失去作用，移除失败，则报错至HCM，人工干预，但同时或多次重试移除成功后再分配(或新监控节点一直重试移除再添加监听)，直至修复完成，移除成功之前，老节点VIP继续使用,不影响用户使用
+ *     连上后同步最新配置时则将 移除之前分配节点，并等待后续分配；
  * 
  * 
  * ★各集群节点完整配置包含(最终保存即一封完整的，leader连不上HCM时 即可读该份配置,进行操作)：
@@ -127,7 +139,7 @@ import net.data.technology.jraft.jsonobj.RdsAllocation;
  * 、Leader判断(连接断开 或 数据包接收异常) 节点故障后，重新计算实例归属后，新增一条 分配配置(某节点增加实例管理) 同步至各节点直至commit
  * 、commit之后，各节点状态机根据配置(需考虑实例状态) 增加对应实例管理（对于监控状态的则需 尝试ping后看是否需要移除远端VIP 再绑定，也可考虑Leader操作） 并将结果通过HCM_S_S返回告知
  * (考虑 ： Leader是通过HCM_S_S 还是HCM_S_R通道告知HCM 节点故障，故障节点HCM_S_S通道未发送心跳也代表故障,但担心仅此通道异常而已，还需Leader再发送一次确认)
- * 、TODO 其他节点的JSON  针对该节点的 所有 分配全部置空
+ * 、todo 其他节点的JSON  针对该节点的 所有 分配全部置空
  * 
  * 某个集群节点重启：// 把之前监管实例的 VIP 全部移除
  * 、与添加集群节点一致，HCM挂了 则超时即 应用本地配置(就算本地配置中有 该节点的 分配配置  但状态机不应用 分配配置)
@@ -582,9 +594,6 @@ public class Middleware implements StateMachine {
     @Override
     public void start(RaftMessageSender raftMessageSender) {
 	this.raftMessageSender = raftMessageSender;
-	// TODO Auto-generated method stub
-	// 疑似 Raft数据存储(包含压缩)仅存储传输的 与快照无关(即不从快照读取) 快照可能更多用来状态机自身启动时 获取应用至最新 并且留意 幂等性
-
     }
 
     /**
@@ -859,8 +868,9 @@ public class Middleware implements StateMachine {
 	    return;
 	}
 	for (RDSInstance allocateRDSInstance : allocates) {
-	    NetworkTools.addIp(allocateRDSInstance.getRdsInstanceInfo().getVip());
-	    AIOAcceptors.getInstance().addServerListen(allocateRDSInstance);
+	    if (NetworkTools.addIp(allocateRDSInstance.getRdsInstanceInfo().getVip()) >= 0) {// todo 根据不同的错误状态进行回复HCM
+		AIOAcceptors.getInstance().addServerListen(allocateRDSInstance);
+	    }
 	}
 	sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
     }
@@ -918,20 +928,38 @@ public class Middleware implements StateMachine {
 		    rdsIds = new ArrayList<String>();
 		    rdsAllocation.setRdsIds(rdsIds);
 		}
-		if (t_rdsAllocation.getDeletes() != null) {
-		    for (String rdsId : t_rdsAllocation.getDeletes()) {
-			rdsIds.remove(rdsId);
+		if (t_rdsAllocation.getRdsIds() != null) {
+		    // 确认监管实例是否一致,不一致则进行处理(针对选出新的Leader 确认当前在线节点是否正常监管对应实例，之后节点变更均走 状态变更 的新增移除流程)
+		    adds = new ArrayList<String>();
+		    deletes = new ArrayList<String>();
+		    for (String rdsId : rdsIds) {
+			if (!t_rdsAllocation.getRdsIds().contains(rdsId)) { // 多余的则删除
+			    deletes.add(rdsId);
+			}
 		    }
-		    if (this.rdsServerId.equals(t_rdsAllocation.getHcsId())) { // 需当前节点管理初始化的实例
-			deletes = t_rdsAllocation.getDeletes();
+		    rdsIds.removeAll(deletes);
+		    for (String rdsId : t_rdsAllocation.getRdsIds()) { // 没有的则增加
+			if (!rdsIds.contains(rdsId)) {
+			    adds.add(rdsId);
+			}
 		    }
-		}
-		if (t_rdsAllocation.getAdds() != null) {
-		    for (String rdsId : t_rdsAllocation.getAdds()) {
-			rdsIds.add(rdsId);
+		    rdsIds.addAll(adds);
+		} else {
+		    if (t_rdsAllocation.getDeletes() != null) {
+			for (String rdsId : t_rdsAllocation.getDeletes()) {
+			    rdsIds.remove(rdsId);
+			}
+			if (this.rdsServerId.equals(t_rdsAllocation.getHcsId())) { // 需当前节点移除的实例
+			    deletes = t_rdsAllocation.getDeletes();
+			}
 		    }
-		    if (this.rdsServerId.equals(t_rdsAllocation.getHcsId())) { // 需当前节点管理初始化的实例
-			adds = t_rdsAllocation.getAdds();
+		    if (t_rdsAllocation.getAdds() != null) {
+			for (String rdsId : t_rdsAllocation.getAdds()) {
+			    rdsIds.add(rdsId);
+			}
+			if (this.rdsServerId.equals(t_rdsAllocation.getHcsId())) { // 需当前节点管理初始化的实例
+			    adds = t_rdsAllocation.getAdds();
+			}
 		    }
 		}
 		if (rdsIds.size() == 0) { // 最终监管实例为空 则 清除
@@ -943,7 +971,9 @@ public class Middleware implements StateMachine {
 	// 先追加 实例至 JSON对象并保存
 	this.saveConfigToFile();
 	if ((adds == null || adds.isEmpty()) && (deletes == null || deletes.isEmpty())) { // 无需处理的 直接结束
-	    sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
+	    if (!"-1".equals(t_hcsClusterAllConfig.getTaskId())) {
+		sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
+	    }
 	    return;
 	}
 
@@ -955,11 +985,11 @@ public class Middleware implements StateMachine {
 		rdsInstanceInfo = rdsInstanceInfoMap.get(rdsId);
 		rdsInstance = rdsInstanceMap.remove(rdsId);
 		if (rdsInstanceInfo == null) {
-		    logger.error(Markers.STATEMACHINE, "rds id :" + rdsId + " JSON is non-existent");
+		    logger.warn(Markers.STATEMACHINE, "rds id :" + rdsId + " JSON is non-existent");
 		    continue;
 		}
 		if (rdsInstance == null) {
-		    logger.error(Markers.STATEMACHINE, "rds id :" + rdsId + " is non-existent");
+		    logger.warn(Markers.STATEMACHINE, "rds id :" + rdsId + " is not handle");
 		    continue;
 		}
 		if (rdsInstanceInfo.getStatus() >= RDSInstance.RDS_INSTANCE_STATUS_ALLOCATED) {
@@ -982,13 +1012,14 @@ public class Middleware implements StateMachine {
 		    rdsInstance = RDSInstance.initRDSInstance(rdsInstanceInfo, true);
 		    rdsInstanceMap.put(rdsId, rdsInstance);
 		    if (rdsInstanceInfo.getStatus() >= RDSInstance.RDS_INSTANCE_STATUS_ALLOCATED) {
-			NetworkTools.addIp(rdsInstanceInfo.getVip());
-			AIOAcceptors.getInstance().addServerListen(rdsInstance);
+			if (NetworkTools.addIp(rdsInstanceInfo.getVip()) >= 0) {
+			    AIOAcceptors.getInstance().addServerListen(rdsInstance);
+			}
 		    }
 		}
 	    }
 	}
-	if ("-1".equals(t_hcsClusterAllConfig.getTaskId())) {
+	if (!"-1".equals(t_hcsClusterAllConfig.getTaskId())) {
 	    sendTaskResponse(socketPacket, t_hcsClusterAllConfig.getTaskId(), MsgSign.SUCCESS_CODE, "OK");
 	}
     }
@@ -1117,6 +1148,10 @@ public class Middleware implements StateMachine {
 	}
     }
 
+    private void initFromHCSClusterAllConfig(HCSClusterAllConfig hcsClusterAllConfig) {
+	// 如快照中 分配的实例为空 则应判断当前是否有实例监管，有则清空
+    }
+
     /**
      * 应用 之前保存的 快照数据(From Leader)
      * 
@@ -1147,6 +1182,7 @@ public class Middleware implements StateMachine {
 	    }
 	    hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(hcsClusterAllConfigJSONStr);
 	    // TODO 通用init方法 ：start时加载调用一次，此时也加载一次 调用一次 ，方法内容根据 hcsClusterAllConfig 进行初始化
+	    // 如快照中 分配的实例为空 则应判断当前是否有实例监管，有则清空( 启动时 调用 则 如此，否则 按最新配置变更)
 	    bufferReader.close();
 	    reader.close();
 	    input.close();
@@ -1247,7 +1283,7 @@ public class Middleware implements StateMachine {
 
 
     /**
-     * 中间件故障 不提供服务 发送完对应通知之后 JVM退出
+     * 中间件故障 不提供服务 TODO 发送完对应HCM_S_S通知之后 JVM退出
      * 
      * @param code
      * @see net.data.technology.jraft.StateMachine#exit(int)
@@ -1269,8 +1305,33 @@ public class Middleware implements StateMachine {
     @Override
     public void notifyServerRole(ServerRole serverRole) {
 	this.serverRole = serverRole;
-	// todo 角色变化已埋点 只剩制定协议 HCM_S_S 发送HCM
-
+	// TODO 角色变化已埋点 只剩制定协议 HCM_S_S 发送HCM
+	// 变为 Leader了之后 则将当前实例分配情况 再通知所有节点，启动的节点 如判断---
+	// ---当前已有对应操作则不做任何变动，如未有则重新做对应操作，对于故障节点则会进入 notifyServerStatus 方法进行变更处理
+	if (ServerRole.Leader == serverRole) {
+	    HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
+	    t_hcsClusterAllConfig.setTaskId("-1");
+	    t_hcsClusterAllConfig.setRdsAllocations(this.hcsClusterAllConfig.getRdsAllocations());
+	    SocketPacket socketPacket = new SocketPacket(MsgSign.TYPE_RDS_SERVER, MsgSign.RAFT_RDS_CHANGE,
+		    t_hcsClusterAllConfig.toString().getBytes(StandardCharsets.UTF_8));
+	    raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })
+		    .whenCompleteAsync((Boolean result, Throwable err) -> {
+			if (err != null) {
+			    String errMsg = "notifyServerRole-->raftMessageSender.appendEntries("
+				    + socketPacket.getDebugValue() + ") is error:" + err.getMessage();
+			    logger.error(Markers.STATEMACHINE, errMsg, err);
+			} else if (!result) {
+			    String errMsg = "notifyServerRole-->raftMessageSender.appendEntries("
+				    + socketPacket.getDebugValue() + ") is System rejected(" + result + ")";
+			    logger.error(Markers.STATEMACHINE, errMsg);
+			} else {
+			    if (logger.isInfoEnabled()) {
+				logger.info(Markers.STATEMACHINE, "notifyServerRole-->raftMessageSender.appendEntries("
+					+ socketPacket.getDebugValue() + ") is Accpeted, server is being added");
+			    }
+			}
+		    });
+	}
     }
 
     /*
@@ -1285,8 +1346,11 @@ public class Middleware implements StateMachine {
 	if (this.rdsServerId.equals(hcsId)) {
 	    this.status = status;
 	}
-	serverStatusMap.put(hcsId, status);
-	// todo 方法未埋点 并制定协议 HCM_S_S 发送HCM 状态变更
+	Integer old_status = serverStatusMap.put(hcsId, status);
+	if (old_status != null && old_status == status) { // 状态未实际变更
+	    return;
+	}
+	// TODO 制定协议 HCM_S_S 发送HCM 状态变更
 	// todo 实例分配的时候 需判断状态后再进行,之前需进行实例状态同步
 	if (StateMachine.STATUS_OFFLINE == status) { // 不在线 则移除 上面所有实例
 	    ArrayList<String> addRdss = new ArrayList<String>();
@@ -1322,7 +1386,7 @@ public class Middleware implements StateMachine {
 	    RDSInstanceInfo rdsInstanceInfo = null;
 	    for (String rdsId : addRdss) {
 		rdsInstanceInfo = this.rdsInstanceInfoMap.get(rdsId);
-		if (rdsInstanceInfo != null) { // 移除VIP
+		if (rdsInstanceInfo != null) { // 远程移除VIP
 		    NetworkTools.delIpOfRemote(sshOperater, rdsInstanceInfo.getVip());
 		}
 	    }
@@ -1370,7 +1434,7 @@ public class Middleware implements StateMachine {
 			    }
 			}
 		    });
-	} // 若恢复在线 则等待后期分配 todo 后期可以考虑 未分配的实例 迁移归属
+	} // 若恢复在线 则等待后期分配 todo 后期可以考虑 未分配的实例 迁移至新恢复在线节点
     }
 
     /**
@@ -1447,7 +1511,7 @@ public class Middleware implements StateMachine {
 	    newHCSGroup.addAll(addNode);
 	}
 
-	// todo 考虑 变更JSON配置文件 this.hcsClusterAllConfig 增加删除时 均以任务形式返回HCM
+	// TODO 考虑 变更JSON配置文件 this.hcsClusterAllConfig 并 制定协议 增加删除时 HCM_S_S 均以任务形式返回HCM
 	if (serversRemoved.size() <= 0 && serversAdded.size() <= 0) {
 	    return;
 	}
