@@ -1,5 +1,8 @@
 package net.data.technology.jraft.tools;
 
+import java.util.ArrayList;
+import java.util.Collection;
+
 /**
  * 通用工具类
  */
@@ -27,6 +30,25 @@ public class Tools {
         return obj != null ? obj.toString() : "null";
     }
 
+    /**
+     * 返回对比集合 不在 目标集合 中元素的集合
+     * 
+     * @param oldList
+     *            对比集合
+     * @param targetList
+     *            目标集合
+     * @return not null
+     */
+    public static <E> ArrayList<E> getExclusiveList(Collection<E> oldList, Collection<E> targetList) {
+	ArrayList<E> exclusiveList = new ArrayList<E>();
+	for (E e : oldList) {
+	    if (!targetList.contains(e)) {
+		exclusiveList.add(e);
+	    }
+	}
+	return exclusiveList;
+    }
+
 
     public static void main(String[] args) {
         // String s = "1";
@@ -39,4 +61,3 @@ public class Tools {
         // System.out.println(toString(ss));
     }
 }
-

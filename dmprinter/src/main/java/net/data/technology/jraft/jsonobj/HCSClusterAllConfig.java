@@ -24,6 +24,14 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
      * 私有配置 部分:集群各自节点运行参数
      */
     private HCSSystemConfig systemConfig;
+    /**
+     * 日志索引
+     */
+    private Long logIndex;
+    /**
+     * 最后日志索引
+     */
+    private Long lastLogIndex;
 
     /**
      * 公有配置 部分：该组集群 所有节点信息
@@ -49,6 +57,39 @@ public class HCSClusterAllConfig extends SocketRequest implements ToSortObject {
      */
     public HCSSystemConfig getSystemConfig() {
 	return systemConfig;
+    }
+
+    /**
+     * @return {@link #logIndex} 的值
+     */
+    public Long getLogIndex() {
+	return logIndex;
+    }
+
+    /**
+     * @param logIndex
+     *            根据 logIndex 设置 {@link #logIndex}的值
+     */
+    public void setLogIndex(Long logIndex) {
+	this.logIndex = logIndex;
+    }
+
+    /**
+     * Gets the log index that contains the previous cluster configuration
+     * 
+     * @return log index {@link #lastLogIndex} 的值
+     * 
+     */
+    public Long getLastLogIndex() {
+	return lastLogIndex;
+    }
+
+    /**
+     * @param lastLogIndex
+     *            根据 lastLogIndex 设置 {@link #lastLogIndex}的值
+     */
+    public void setLastLogIndex(Long lastLogIndex) {
+	this.lastLogIndex = lastLogIndex;
     }
 
     /**
