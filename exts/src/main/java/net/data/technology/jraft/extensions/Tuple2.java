@@ -1,4 +1,4 @@
-package net.data.technology.jraft;
+package net.data.technology.jraft.extensions;
 
 public class Tuple2<E1, E2> extends Tuple {
     private E1 e1;

@@ -25,6 +25,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -151,6 +152,9 @@ public class FileBasedSequentialLogStore implements SequentialLogStore {
         this.bufferSize = bufferSize;
         this.logger = LogManager.getLogger(getClass());
         try{
+	    if (!Files.isDirectory(this.logContainer, LinkOption.NOFOLLOW_LINKS)) {
+		Files.createDirectories(this.logContainer);
+	    }
             this.indexFile = new RandomAccessFile(this.logContainer.resolve(LOG_INDEX_FILE).toString(), "rw");
             this.dataFile = new RandomAccessFile(this.logContainer.resolve(LOG_STORE_FILE).toString(), "rw");
             this.startIndexFile = new RandomAccessFile(this.logContainer.resolve(LOG_START_INDEX_FILE).toString(), "rw");

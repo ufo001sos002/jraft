@@ -32,6 +32,7 @@ import javax.net.ssl.TrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.data.technology.jraft.extensions.Tuple2;
 import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 
 /**

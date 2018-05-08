@@ -13,6 +13,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -36,6 +37,7 @@ import net.data.technology.jraft.extensions.FileBasedServerStateManager;
 import net.data.technology.jraft.extensions.Log4jLoggerFactory;
 import net.data.technology.jraft.extensions.RpcTcpClientFactory;
 import net.data.technology.jraft.extensions.RpcTcpListener;
+import net.data.technology.jraft.extensions.Tuple2;
 import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
 import net.data.technology.jraft.jsonobj.HCSNode;
 import net.data.technology.jraft.jsonobj.RDSInstanceInfo;
@@ -434,7 +436,8 @@ public class Middleware implements StateMachine {
 	if(clusterDirectoryPath == null) {
 	    synchronized (CLUSTER_FOLDER_NAME) {
 		if(clusterDirectoryPath == null) {
-		    clusterDirectoryPath = Paths.get(SYS_HOME).resolve(CONFIG_FOLDER_NAME).resolve(CLUSTER_FOLDER_NAME);
+		    clusterDirectoryPath = Paths.get(getHomePath()).resolve(CONFIG_FOLDER_NAME)
+			    .resolve(CLUSTER_FOLDER_NAME);
 		}
 	    }
 	}
@@ -514,7 +517,8 @@ public class Middleware implements StateMachine {
 		return new Tuple2<Integer, String>(MsgSign.SUCCESS_CODE, "ok");
 	    }
 	    // 初始化集群
-	    ServerStateManager stateManager = new FileBasedServerStateManager(getClusterDirectoryPath());
+	    ServerStateManager stateManager = new FileBasedServerStateManager(getClusterDirectoryPath(),
+		    this.rdsServerId);
 	    // if (stateManager.existsClusterConfiguration()) { // 本地存在配置(走快照)
 	    // config = stateManager.loadClusterConfiguration();
 	    // } else { // 初次启动本地无配置
@@ -1451,6 +1455,10 @@ public class Middleware implements StateMachine {
     @Override
     public Snapshot getLastSnapshot() {
 	try {
+	    if (!Files.isDirectory(getSnapshotDirectoryPath(), LinkOption.NOFOLLOW_LINKS)) {
+		Files.createDirectories(getSnapshotDirectoryPath());
+		return null;
+	    }
 	    Stream<Path> files = Files.list(getSnapshotDirectoryPath());
 	    Path latestSnapshot = null;
 	    long maxLastLogIndex = 0;
@@ -1576,24 +1584,34 @@ public class Middleware implements StateMachine {
 		logger.error(Markers.STATEMACHINE, "hcsId:"+hcsId+" is non-existent");
 		return;
 	    }
-	    SSHOperater sshOperater = null;
 	    String ip = server.getIp();
 	    if (ip == null) {
 		logger.error(Markers.STATEMACHINE, "hcsId:" + hcsId + "  ip is non-existent");
 		return;
 	    }
-	    if(server.isUsedPrvkey()) {
-		sshOperater = SSHPoolManager.getSSHOperater(ip, server.getSshPort(), server.getUserName(), true,
-			server.getPrvkeyFileContent(), server.getPassword());
+	    if (NetworkTools.getDeviceByIp(ip) != null) { // 如果在同一台机器
+		RDSInstanceInfo rdsInstanceInfo = null;
+		for (String rdsId : addRdss) {
+		    rdsInstanceInfo = this.rdsInstanceInfoMap.get(rdsId);
+		    if (rdsInstanceInfo != null) {
+			NetworkTools.delIp(rdsInstanceInfo.getVip());
+		    }
+		}
 	    } else {
-		sshOperater = SSHPoolManager.getSSHOperater(ip, server.getSshPort(), server.getUserName(),
-			server.getPassword());
-	    }
-	    RDSInstanceInfo rdsInstanceInfo = null;
-	    for (String rdsId : addRdss) {
-		rdsInstanceInfo = this.rdsInstanceInfoMap.get(rdsId);
-		if (rdsInstanceInfo != null) { // 远程移除VIP
-		    NetworkTools.delIpOfRemote(sshOperater, rdsInstanceInfo.getVip());
+		SSHOperater sshOperater = null;
+		if (server.isUsedPrvkey()) {
+		    sshOperater = SSHPoolManager.getSSHOperater(ip, server.getSshPort(), server.getUserName(), true,
+			    server.getPrvkeyFileContent(), server.getPassword());
+		} else {
+		    sshOperater = SSHPoolManager.getSSHOperater(ip, server.getSshPort(), server.getUserName(),
+			    server.getPassword());
+		}
+		RDSInstanceInfo rdsInstanceInfo = null;
+		for (String rdsId : addRdss) {
+		    rdsInstanceInfo = this.rdsInstanceInfoMap.get(rdsId);
+		    if (rdsInstanceInfo != null) { // 远程移除VIP
+			NetworkTools.delIpOfRemote(sshOperater, rdsInstanceInfo.getVip());
+		    }
 		}
 	    }
 	    String handleId = null;

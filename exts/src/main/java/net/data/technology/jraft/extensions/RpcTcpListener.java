@@ -161,30 +161,26 @@ public class RpcTcpListener implements RpcListener {
                     		logger.debug("request header read, try to see if there is a request body");
                     	}
                     	// 读取Raft请求头数据
-                        final Pair<RaftRequestMessage, Integer> requestInfo = BinaryUtils.bytesToRequestMessage(buffer.array());
-                        if(requestInfo.getSecond().intValue() > 0){// 有日志内容
-                            ByteBuffer logBuffer = ByteBuffer.allocate(requestInfo.getSecond().intValue());
-                            AsyncUtility.readFromChannel(connection, logBuffer, null, handlerFrom((Integer size, Object attachment) -> {
-                                if(size.intValue() < requestInfo.getSecond().intValue()){ // 未满足此条件情况 只有 连接 断开 或收包异常  进入此方法前将一直等待收报完成
-                                    if(logger.isInfoEnabled()) {
-                                    	logger.info("failed to read the log entries data from client socket");
-                                    }
-                                    closeSocket(connection);
-                                }else{
-                                    try{
-                                        requestInfo.getFirst().setLogEntries(BinaryUtils.bytesToLogEntries(logBuffer.array()));
-                                        processRequest(connection, requestInfo.getFirst(), handler);
-                                    }catch(Throwable error){
-                                    	if(logger.isInfoEnabled()) {
-                                    		logger.info("log entries parsing error", error);
-                                    	}
-                                        closeSocket(connection);
-                                    }
+                        final Tuple4<RaftRequestMessage, Integer, Integer, Integer> requestInfo = BinaryUtils.bytesToRequestMessage(buffer.array());
+                        ByteBuffer logBuffer = ByteBuffer.allocate(requestInfo._2() + requestInfo._3() + requestInfo._4());
+                        AsyncUtility.readFromChannel(connection, logBuffer, null, handlerFrom((Integer size, Object attachment) -> {
+                         // 未满足此条件情况 只有 连接 断开 或收包异常  进入此方法前将一直等待收报完成
+			    if (size.intValue() < requestInfo._2() + requestInfo._3() + requestInfo._4()) {
+                                if(logger.isInfoEnabled()) {
+                                     logger.info("failed to read the log entries data from client socket");
                                 }
-                            }, connection));
-                        }else{ // 无日志内容
-                            processRequest(connection, requestInfo.getFirst(), handler);
-                        }
+                                closeSocket(connection);
+                            }else{
+                                try{
+                                    processRequest(connection, BinaryUtils.bufferToRequestMessage(requestInfo, logBuffer), handler);
+                                }catch(Throwable error){
+                                	if(logger.isInfoEnabled()) {
+                                		logger.info("log entries parsing error", error);
+                                	}
+                                    closeSocket(connection);
+                                }
+                            }
+                        }, connection));
                     }catch(Throwable runtimeError){
                         // if there are any conversion errors, we need to close the client socket to prevent more errors
                         closeSocket(connection);

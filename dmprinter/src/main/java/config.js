@@ -1,3 +1,4 @@
+// http://www.sojson.com/simple_json.html
 //---------------------------完整集群编组信息-------------------------------------------------
 {
 	"taskId" : "uuid" , // 任务唯一Id, RS响应必须带该字段值
@@ -151,3 +152,15 @@
 
 
 //-----------------添加实例、分配实例 、实例收回、实例移出 、成功回包  JSON协议与之前一致 只是最终由对应管理实例的节点进行生效处理---------------------
+
+
+
+
+
+
+
+
+//--------------------------------------------------------测试用 JSON压缩版-------------------------------------------------------
+下发配置  2   {"taskId":"uuid","systemConfig":{"heartbeatToM":2000,"usingAIO":1},"hcsGroup":[{"hcsId":"1","ip":"192.168.200.215","port":9001,"status":0,"isUsedPrvkey":false,"userName":"root","prvkeyFileContent":"AwABAgM=","passord":"123456"},{"hcsId":"2","ip":"192.168.200.215","port":9002,"status":0,"isUsedPrvkey":false,"userName":"root","prvkeyFileContent":"AwABAgM=","passord":"123456"},{"hcsId":"3","ip":"192.168.200.215","port":9003,"status":0,"isUsedPrvkey":false,"userName":"root","prvkeyFileContent":"AwABAgM=","passord":"123456"}],"allocationRule":{"rule":0}}
+
+

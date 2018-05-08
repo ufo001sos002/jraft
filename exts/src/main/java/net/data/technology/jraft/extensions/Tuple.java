@@ -1,4 +1,4 @@
-package net.data.technology.jraft;
+package net.data.technology.jraft.extensions;
 
 
 public abstract class Tuple {

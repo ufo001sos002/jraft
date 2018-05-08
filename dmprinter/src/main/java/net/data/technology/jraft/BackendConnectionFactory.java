@@ -7,6 +7,8 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.NetworkChannel;
 
+import net.data.technology.jraft.extensions.Tuple2;
+
 /**
  * @author hotdb
  */

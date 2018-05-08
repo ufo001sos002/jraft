@@ -76,22 +76,42 @@ public class FileBasedServerStateManager implements ServerStateManager {
      * 服务端ID 从{@link #CONFIG_FILE} 获取
      */
     private String serverId;
+
     /**
      * 
      * 根据参数构造 类{@link FileBasedServerStateManager} 对象
-     * @param dataDirectory 文件目录
+     * 
+     * @param dataDirectory
+     *            文件目录
      */
     public FileBasedServerStateManager(Path dataDirectory) {
+	this(dataDirectory, null);
+    }
+    
+    /**
+     * 
+     * 根据参数构造 类{@link FileBasedServerStateManager} 对象
+     * 
+     * @param dataDirectory
+     *            文件目录
+     * @param serverId
+     *            当前集群节点ID
+     */
+    public FileBasedServerStateManager(Path dataDirectory, String serverId) {
         this.logStore = new FileBasedSequentialLogStore(dataDirectory);// 构造数据记录 存储对象
 	this.container = dataDirectory;
         this.logger = LogManager.getLogger(getClass());
         try{
-            Properties props = new Properties();
-            FileInputStream configInput = new FileInputStream(this.container.resolve(CONFIG_FILE).toString());
-            props.load(configInput);
-            String serverIdValue = props.getProperty("server.id");
-	    this.serverId = serverIdValue == null || serverIdValue.length() == 0 ? "-1" : serverIdValue.trim(); // 读取当前集群服务端程序ID
-            configInput.close();
+	    if (serverId == null) {
+		Properties props = new Properties();
+		FileInputStream configInput = new FileInputStream(this.container.resolve(CONFIG_FILE).toString());
+		props.load(configInput);
+		String serverIdValue = props.getProperty("server.id");
+		this.serverId = serverIdValue == null || serverIdValue.length() == 0 ? "-1" : serverIdValue.trim(); // 读取当前集群服务端程序ID
+		configInput.close();
+	    } else {
+		this.serverId = serverId;
+	    }
             this.serverStateFile = new RandomAccessFile(this.container.resolve(STATE_FILE).toString(), "rw");
 	    this.serverStateFile.seek(0);// 打开并定位 服务器状态文件 写入位置
         }catch(IOException exception){
@@ -180,12 +200,18 @@ public class FileBasedServerStateManager implements ServerStateManager {
 
             byte[] stateData = new byte[Long.BYTES * 2 + Integer.BYTES];
             this.read(stateData);
-            this.serverStateFile.seek(0);
             ByteBuffer buffer = ByteBuffer.wrap(stateData);
             ServerState state = new ServerState();
             state.setTerm(buffer.getLong());
             state.setCommitIndex(buffer.getLong());
-	    state.setVotedFor(BinaryUtils.bufferGetString(buffer));
+	    int num = buffer.getInt();
+	    if (num > 0) {
+		stateData = new byte[num];
+		this.read(stateData);
+		buffer = ByteBuffer.wrap(stateData);
+		state.setVotedFor(new String(stateData, StandardCharsets.UTF_8));
+	    }
+	    this.serverStateFile.seek(0);
             return state;
         }catch(IOException ioError){
             this.logger.error("failed to read from the server state file", ioError);
