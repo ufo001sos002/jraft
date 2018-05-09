@@ -21,7 +21,6 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import net.data.technology.jraft.LoggerFactory;
 import net.data.technology.jraft.RaftConsensus;
 import net.data.technology.jraft.RaftContext;
 import net.data.technology.jraft.RaftMessageHandler;
@@ -30,7 +29,6 @@ import net.data.technology.jraft.RaftParameters;
 import net.data.technology.jraft.RpcListener;
 import net.data.technology.jraft.ServerStateManager;
 import net.data.technology.jraft.StateMachine;
-import net.data.technology.jraft.extensions.Log4jLoggerFactory;
 
 public abstract class JraftServletListener implements RpcListener, ServletContextListener {
 
@@ -55,7 +53,6 @@ public abstract class JraftServletListener implements RpcListener, ServletContex
                 this.getStateMachine(),
                 this.getParameters(),
                 this,
-                this.getLoggerFactory(),
                 new HttpRpcClientFactory());
         this.servletContext.setAttribute(JRAFT_MESSAGE_SENDER, RaftConsensus.run(context));
     }
@@ -77,9 +74,5 @@ public abstract class JraftServletListener implements RpcListener, ServletContex
     protected abstract ServerStateManager getServerStateManager();
 
     protected abstract StateMachine getStateMachine();
-
-    protected LoggerFactory getLoggerFactory(){
-        return new Log4jLoggerFactory();
-    }
 
 }

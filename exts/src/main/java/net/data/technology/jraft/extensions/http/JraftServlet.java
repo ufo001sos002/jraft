@@ -25,8 +25,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -36,13 +36,14 @@ import net.data.technology.jraft.RaftRequestMessage;
 import net.data.technology.jraft.RaftResponseMessage;
 
 public class JraftServlet extends HttpServlet {
-
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(JraftServlet.class);
     private static final long serialVersionUID = -414289039785671159L;
-    private Logger logger;
     private Gson gson;
 
     public JraftServlet(){
-        this.logger = LogManager.getLogger(getClass());
         this.gson = new GsonBuilder().create();
     }
 
@@ -55,7 +56,7 @@ public class JraftServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException{
         RaftMessageHandler messageHandler = JraftServletListener.getMessageHandler(this.getServletContext());
         if(messageHandler == null){
-            this.logger.error("JraftServletListener is not setup correctly, no message handler could be found.");;
+	    logger.error("JraftServletListener is not setup correctly, no message handler could be found.");
             response.setStatus(503); // Service is not available
             response.getWriter().print("Jraft is not yet ready to serve");
         }else{

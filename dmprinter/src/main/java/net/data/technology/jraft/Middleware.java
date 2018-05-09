@@ -34,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.extensions.FileBasedServerStateManager;
-import net.data.technology.jraft.extensions.Log4jLoggerFactory;
 import net.data.technology.jraft.extensions.RpcTcpClientFactory;
 import net.data.technology.jraft.extensions.RpcTcpListener;
 import net.data.technology.jraft.extensions.Tuple2;
@@ -491,8 +490,21 @@ public class Middleware implements StateMachine {
 	ClusterConfiguration config = new ClusterConfiguration();
 	if (hcsClusterAllConfig.getHcsGroup() != null) {
 	    List<ClusterServer> servers = config.getServers();
+	    ClusterServer server = null;
 	    for (HCSNode hcsNode : hcsClusterAllConfig.getHcsGroup()) {
-		servers.add(new ClusterServer(hcsNode.getHcsId(), hcsNode.getIp(), hcsNode.getPort()));
+		server = new ClusterServer(hcsNode.getHcsId(), hcsNode.getIp(), hcsNode.getPort());
+		server.setUsedPrvkey(hcsNode.isUsedPrvkey());
+		server.setSshPort(hcsNode.getSshPort() != null ? hcsNode.getSshPort() : 22);
+		if (hcsNode.getPrvkeyFileContent() != null) {
+		    server.setPrvkeyFileContent(hcsNode.getPrvkeyFileContent());
+		}
+		if (hcsNode.getUserName() != null) {
+		    server.setUserName(hcsNode.getUserName());
+		}
+		if (hcsNode.getPassword() != null) {
+		    server.setPassword(hcsNode.getPassword());
+		}
+		servers.add(server);
 	    }
 	}
 	if (hcsClusterAllConfig.getLogIndex() != null) {
@@ -579,7 +591,7 @@ public class Middleware implements StateMachine {
 			.withSnapshotEnabled(10).withSyncSnapshotBlockSize(0);
 		// 构建状态机 对象
 		RaftContext context = new RaftContext(stateManager, this, raftParameters,
-			new RpcTcpListener(localEndpoint.getPort(), executor), new Log4jLoggerFactory(),
+			new RpcTcpListener(localEndpoint.getPort(), executor),
 			new RpcTcpClientFactory(executor), executor);
 		this.hcsClusterAllConfig = hcsClusterAllConfig;
 		saveConfigToFile();
@@ -596,7 +608,7 @@ public class Middleware implements StateMachine {
     /**
      * 从HCM启动集群超时时间,超时后从本地文件启动(ms)
      */
-    public static long startClusterTimeOut = 5 * 60 * 1000;
+    public static long startClusterTimeOut = 60 * 1000;
 
     /**
      * 启动
@@ -617,7 +629,7 @@ public class Middleware implements StateMachine {
 	if (getHCMNewConfig) {
 	    // 等待新配置
 	    long time = System.currentTimeMillis();
-	    while (!startupComplete.get() || (System.currentTimeMillis() - time <= startClusterTimeOut)) {
+	    while (!startupComplete.get() && (System.currentTimeMillis() - time <= startClusterTimeOut)) {
 		Tools.sleep(100);
 	    }
 	}
@@ -779,7 +791,7 @@ public class Middleware implements StateMachine {
 		    } else {
 			if (logger.isInfoEnabled()) {
 			    logger.info(Markers.STATEMACHINE, "handleRDSInstanceAdd-->raftMessageSender.appendEntries("
-				    + socketPacket.getDebugValue() + ") is Accpeted, server is being added");
+				    + socketPacket.getDebugValue() + ") is Accpeted");
 			}
 		    }
 		});
@@ -1502,7 +1514,7 @@ public class Middleware implements StateMachine {
      */
     @Override
     public void exit(int code) {
-	logger.warn("StateMachine exit: %d\n", code);
+	logger.warn(String.format("StateMachine exit: %d\n", code));
 	System.exit(code);
 
     }
@@ -1523,7 +1535,24 @@ public class Middleware implements StateMachine {
 	if (ServerRole.Leader == serverRole) {
 	    HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
 	    t_hcsClusterAllConfig.setTaskId("-1");
-	    t_hcsClusterAllConfig.setRdsAllocations(this.hcsClusterAllConfig.getRdsAllocations());
+	    ArrayList<RdsAllocation> t_RdsAllocations = new ArrayList<RdsAllocation>();
+	    RdsAllocation t_rdsAllocation = null;
+	    for (ClusterServer server : this.servers) {
+		for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
+		    if (server.getId().equals(rdsAllocation.getHcsId())) {
+			t_rdsAllocation = new RdsAllocation(rdsAllocation.getHcsId());
+			t_rdsAllocation.setRdsIds(rdsAllocation.getRdsIds());
+			continue;
+		    }
+		}
+		if (t_rdsAllocation == null) { // 无则构造空的
+		    t_rdsAllocation = new RdsAllocation(server.getId());
+		    t_rdsAllocation.setRdsIds(new ArrayList<String>());
+		}
+		t_RdsAllocations.add(t_rdsAllocation);
+		t_rdsAllocation = null;
+	    }
+	    t_hcsClusterAllConfig.setRdsAllocations(t_RdsAllocations);
 	    SocketPacket socketPacket = new SocketPacket(MsgSign.TYPE_RDS_SERVER, MsgSign.RAFT_RDS_CHANGE,
 		    t_hcsClusterAllConfig.toString().getBytes(StandardCharsets.UTF_8));
 	    raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })
@@ -1539,7 +1568,7 @@ public class Middleware implements StateMachine {
 			} else {
 			    if (logger.isInfoEnabled()) {
 				logger.info(Markers.STATEMACHINE, "notifyServerRole-->raftMessageSender.appendEntries("
-					+ socketPacket.getDebugValue() + ") is Accpeted, server is being added");
+					+ socketPacket.getDebugValue() + ") is Accpeted");
 			    }
 			}
 		    });
@@ -1628,11 +1657,18 @@ public class Middleware implements StateMachine {
 	    }
 	    // 生成最新的 动态分配 请求
 	    ArrayList<RdsAllocation> rdsAllocations = new ArrayList<RdsAllocation>();
-	    RdsAllocation rdsAllocation = new RdsAllocation(hcsId);
-	    rdsAllocation.setDeletes(addRdss);
-	    rdsAllocations.add(rdsAllocation);
-	    for (Entry<String, ArrayList<String>> set : hcsAddsMap.entrySet()) {
-		rdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
+	    if (addRdss.size() > 0) {
+		RdsAllocation rdsAllocation = new RdsAllocation(hcsId);
+		rdsAllocation.setDeletes(addRdss);
+		rdsAllocations.add(rdsAllocation);
+	    }
+	    if (hcsAddsMap.size() > 0) {
+		for (Entry<String, ArrayList<String>> set : hcsAddsMap.entrySet()) {
+		    rdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
+		}
+	    }
+	    if (rdsAllocations.size() == 0) {
+		return;
 	    }
 	    HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
 	    t_hcsClusterAllConfig.setTaskId("-1");
@@ -1654,7 +1690,7 @@ public class Middleware implements StateMachine {
 				logger.info(Markers.STATEMACHINE,
 					"notifyServerStatus-->raftMessageSender.appendEntries("
 						+ socketPacket.getDebugValue()
-						+ ") is Accpeted, server is being added");
+						+ ") is Accpeted");
 			    }
 			}
 		    });
@@ -1795,7 +1831,7 @@ public class Middleware implements StateMachine {
 			if (logger.isInfoEnabled()) {
 			    logger.info(Markers.STATEMACHINE,
 				    "updateClusterConfiguration-->raftMessageSender.appendEntries("
-				    + socketPacket.getDebugValue() + ") is Accpeted, server is being added");
+					    + socketPacket.getDebugValue() + ") is Accpeted");
 			}
 		    }
 		});

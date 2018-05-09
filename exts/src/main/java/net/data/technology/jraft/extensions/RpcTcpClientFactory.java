@@ -22,7 +22,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.RpcClient;
 import net.data.technology.jraft.RpcClientFactory;
@@ -31,6 +32,10 @@ import net.data.technology.jraft.RpcClientFactory;
  * RPC TCP 客户端工厂 实现类 实现 {@link RpcClientFactory}接口类
  */
 public class RpcTcpClientFactory implements RpcClientFactory {
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(RpcTcpClientFactory.class);
     /**
      * 线程池对象 所有RPC TCP客户端共用 用来建立socket连接
      */
@@ -54,7 +59,7 @@ public class RpcTcpClientFactory implements RpcClientFactory {
             URI uri = new URI(endpoint);
             return new RpcTcpClient(new InetSocketAddress(uri.getHost(), uri.getPort()), this.executorService);
         } catch (URISyntaxException e) {
-            LogManager.getLogger(getClass()).error(String.format("%s is not a valid uri", endpoint));
+	    logger.error(String.format("%s is not a valid uri", endpoint));
             throw new IllegalArgumentException("invalid uri for endpoint");
         }
     }

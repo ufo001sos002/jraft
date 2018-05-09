@@ -27,10 +27,17 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Raft客户端对象(公共类)
  */
 public class RaftClient {
+    /**
+     * 日志对象
+     */
+    public static final Logger logger = LoggerFactory.getLogger(RaftClient.class);
     /**
      * K: serverId V: 对应RPC客户端对象
      */
@@ -43,10 +50,7 @@ public class RaftClient {
      * Raft集群配置对象
      */
     private ClusterConfiguration configuration;
-    /**
-     * 自定义系统日志对象
-     */
-    private Logger logger;
+
     private Timer timer;
     /**
      * 当前leader ID (初始化时为随机)
@@ -69,13 +73,12 @@ public class RaftClient {
      * @param configuration RAFT集群配置对象
      * @param loggerFactory 日志工厂
      */
-    public RaftClient(RpcClientFactory rpcClientFactory, ClusterConfiguration configuration, LoggerFactory loggerFactory){
+    public RaftClient(RpcClientFactory rpcClientFactory, ClusterConfiguration configuration) {
         this.random = new Random(Calendar.getInstance().getTimeInMillis());
         this.rpcClientFactory = rpcClientFactory;
         this.configuration = configuration;
         this.leaderId = configuration.getServers().get(this.random.nextInt(configuration.getServers().size())).getId();// 最初始随机leaderId
         this.randomLeader = true;// 表示当前随机leader
-        this.logger = loggerFactory.getLogger(getClass());
         this.timer = new Timer();
     }
 
@@ -157,10 +160,13 @@ public class RaftClient {
      * @param retry 当前重试次数
      */
     private void tryCurrentLeader(RaftRequestMessage request, CompletableFuture<Boolean> future, int rpcBackoff, int retry){
-        logger.debug("trying request to %s as current leader", this.leaderId);
+	if (logger.isDebugEnabled())
+	logger.debug(String.format("trying request to %s as current leader", this.leaderId));
         getOrCreateRpcClient().send(request).whenCompleteAsync((RaftResponseMessage response, Throwable error) -> {
             if(error == null){
-                logger.debug("response from remote server, leader: %s, accepted: %s", response.getDestination(), String.valueOf(response.isAccepted()));
+		if (logger.isDebugEnabled())
+		    logger.debug(String.format("response from remote server, leader: %s, accepted: %s",
+			    response.getDestination(), String.valueOf(response.isAccepted())));
                 if(response.isAccepted()){ // 判断发送日志是否被leader接受
                     future.complete(true); //接受
                 }else{ // 未接受
@@ -174,7 +180,9 @@ public class RaftClient {
                     }
                 }
             }else{
-                logger.info("rpc error, failed to send request to remote server (%s)", error.getMessage());
+		if (logger.isInfoEnabled())
+		    logger.info(String.format("rpc error, failed to send request to remote server (%s)",
+			    error.getMessage()));
                 if(retry > configuration.getServers().size()){ // 重试次数大于 当前服务器节点数 则默认失败
                     future.complete(false);
                     return;
@@ -227,14 +235,16 @@ public class RaftClient {
 
     private String getLeaderEndpoint(){
         for(ClusterServer server : this.configuration.getServers()){
-            if(server.getId() == this.leaderId){
+	    if (this.leaderId.equals(server.getId())) {
                 return server.getEndpoint();
             }
         }
-
-        logger.info("no endpoint could be found for leader %s, that usually means no leader is elected, retry the first one", this.leaderId);
+	if (logger.isInfoEnabled())
+	    logger.info(String.format(
+		    "no endpoint could be found for leader %s, that usually means no leader is elected, retry the first one",this.leaderId));
         this.randomLeader = true;
-        this.leaderId = this.configuration.getServers().get(0).getId();
-        return this.configuration.getServers().get(0).getEndpoint();
+	ClusterServer server = this.configuration.getServers().get(0);
+	this.leaderId = server.getId();
+	return server.getEndpoint();
     }
 }

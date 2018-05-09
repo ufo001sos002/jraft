@@ -55,7 +55,7 @@ public class ClusterServer {
     /**
      * 集群hcs 节点 ssh通讯端口
      */
-    private Integer sshPort;
+    private int sshPort;
     /**
      * 是否使用私钥 true 使用
      */
@@ -241,7 +241,7 @@ public class ClusterServer {
     public byte[] toBytes(){
 	byte[] idData = this.id.getBytes(StandardCharsets.UTF_8);
         byte[] endpointData = this.endpoint.getBytes(StandardCharsets.UTF_8);
-	int bufferLength = Integer.BYTES * 2 + idData.length + endpointData.length;
+	int bufferLength = Integer.BYTES * 5 + Byte.BYTES + idData.length + endpointData.length;
 	byte[] data = null;
 	if (this.userName != null) {
 	    data = this.userName.getBytes(StandardCharsets.UTF_8);
@@ -249,35 +249,28 @@ public class ClusterServer {
 	if (this.prvkeyFileContent != null) {
 	    data = this.prvkeyFileContent;
 	}
-	byte[] passwordData = null;
 	if (data != null) {
-	    bufferLength += Byte.BYTES + Integer.BYTES + data.length;
-	    if (this.password != null) {
-		passwordData = this.password.getBytes(StandardCharsets.UTF_8);
-		bufferLength += Integer.BYTES + passwordData.length;
-	    }
+	    bufferLength += data.length;
 	}
-	if (this.sshPort != null) {
-	    bufferLength += Integer.BYTES;
+	byte[] passwordData = null;
+	if (this.password != null) {
+	    passwordData = this.password.getBytes(StandardCharsets.UTF_8);
+	    bufferLength += passwordData.length;
 	}
 	ByteBuffer buffer = ByteBuffer.allocate(bufferLength);
 	buffer.putInt(idData.length);
 	buffer.put(idData);
         buffer.putInt(endpointData.length);
         buffer.put(endpointData);
-	if (this.sshPort != null) {
-	    buffer.putInt(this.sshPort);
+	buffer.putInt(this.sshPort);
+	buffer.put((byte) (this.isUsedPrvkey ? 1 : 0));
+	buffer.putInt(data.length);
+	if (data != null && data.length > 0) {
+	    buffer.put(data);
 	}
-	if (data != null) {
-	    buffer.put((byte) (this.isUsedPrvkey ? 1 : 0));
-	    buffer.putInt(data.length);
-	    if (data.length > 0) {
-		buffer.put(data);
-	    }
-	    buffer.putInt(passwordData.length);
-	    if (passwordData != null && passwordData.length > 0) {
-		buffer.put(passwordData);
-	    }
+	buffer.putInt(passwordData.length);
+	if (passwordData != null && passwordData.length > 0) {
+	    buffer.put(passwordData);
 	}
         return buffer.array();
     }
@@ -297,14 +290,14 @@ public class ClusterServer {
     /**
      * @return {@link #sshPort} 的值
      */
-    public Integer getSshPort() {
+    public int getSshPort() {
         return sshPort;
     }
 
     /**
      * @param sshPort 根据 sshPort 设置 {@link #sshPort}的值
      */
-    public void setSshPort(Integer sshPort) {
+    public void setSshPort(int sshPort) {
         this.sshPort = sshPort;
     }
 

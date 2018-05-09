@@ -30,8 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.RaftRequestMessage;
 import net.data.technology.jraft.RaftResponseMessage;
@@ -42,6 +42,10 @@ import net.data.technology.jraft.tools.Tools;
  * RPC TCP 客户端 实现类 实现 {@link RpcClient} 接口类
  */
 public class RpcTcpClient implements RpcClient {
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(RpcTcpClient.class);
     /**
      * 当前Socket通道对象
      */
@@ -74,10 +78,6 @@ public class RpcTcpClient implements RpcClient {
      * 需要进行RPC TCP 通讯的地址
      */
     private InetSocketAddress remote;
-    /**
-     * 原生日志对象
-     */
-    private Logger logger;
 
     /**
      * 
@@ -92,7 +92,6 @@ public class RpcTcpClient implements RpcClient {
      */
     public RpcTcpClient(InetSocketAddress remote, ExecutorService executorService){
         this.remote = remote;
-        this.logger = LogManager.getLogger(getClass());
         this.readTasks = new ConcurrentLinkedQueue<AsyncTask<ByteBuffer>>();
         this.writeTasks = new ConcurrentLinkedQueue<AsyncTask<RaftRequestMessage>>();
         this.readers = new AtomicInteger(0);
@@ -100,7 +99,7 @@ public class RpcTcpClient implements RpcClient {
         try{
             this.channelGroup = AsynchronousChannelGroup.withThreadPool(executorService);
         }catch(IOException err){
-            this.logger.error("failed to create channel group", err);
+	    logger.error("failed to create channel group", err);
             throw new RuntimeException("failed to create the channel group due to errors.");
         }
     }
@@ -110,7 +109,7 @@ public class RpcTcpClient implements RpcClient {
      */
     private AsynchronousSocketChannel getConnection() {
 	int num = 1000; // 最大等待10s
-	while (connection != null && connection.isOpen() && !connectionUsable.get() && num > 0) {
+	while (!connectionUsable.get() && num > 0) {
 	    Tools.sleep(10);
 	    num--;
 	}
@@ -194,6 +193,7 @@ public class RpcTcpClient implements RpcClient {
         }
     }
     
+
     /**
      * 读取回包数据
      * 
@@ -206,7 +206,7 @@ public class RpcTcpClient implements RpcClient {
         if(!skipQueueing){
             int readerCount = this.readers.getAndIncrement();
             if(readerCount > 0){
-                this.logger.debug("there is a pending read, queue this read task");
+		logger.debug("there is a pending read, queue this read task");
                 this.readTasks.add(task);
                 return;
             }
@@ -218,13 +218,39 @@ public class RpcTcpClient implements RpcClient {
                 context.future.completeExceptionally(new IOException("Only part of the response data could be read"));
                 closeSocket();
             }else{
-                RaftResponseMessage response = BinaryUtils.bytesToResponseMessage(context.input.array());
-                context.future.complete(response);
+                try {
+                    final Tuple3<RaftResponseMessage, Integer, Integer> tuple3 = BinaryUtils.bytesToResponseMessage(context.input.array());
+                    ByteBuffer logBuffer = ByteBuffer.allocate(tuple3._2() + tuple3._3());
+                    AsyncUtility.readFromChannel(getConnection(), logBuffer, null, handlerFrom((Integer size, AsyncTask<ByteBuffer> attachment) -> {
+                	// 未满足此条件情况 只有 连接 断开 或收包异常 进入此方法前将一直等待收报完成
+                	if (size.intValue() < tuple3._2() + tuple3._3()) {
+                	    if (logger.isInfoEnabled()) {
+                		logger.info("failed to read the log entries data from client socket");
+                	    }
+                	    closeSocket();
+        		} else {
+        		    try {
+        			logBuffer.flip();
+        			RaftResponseMessage response = BinaryUtils.bufferToRaftResponseMessage(tuple3, logBuffer);
+        			context.future.complete(response);
+        		    } catch (Throwable error) {
+        			if (logger.isInfoEnabled()) {
+        			    logger.info("log entries parsing error", error);
+        			}
+        			closeSocket();
+        		    }
+        		}
+                    }));
+                } catch (Throwable runtimeError) {
+                    closeSocket();
+                    if (logger.isInfoEnabled()) {
+                	logger.info("message reading/parsing error", runtimeError);
+                    }
+		}
             }
-
             int waitingReaders = this.readers.decrementAndGet();
             if(waitingReaders > 0){
-                this.logger.debug("there are pending readers in queue, will try to process them");
+			logger.debug("there are pending readers in queue, will try to process them");
                 AsyncTask<ByteBuffer> pendingTask = null;
                 while((pendingTask = this.readTasks.poll()) == null);
                 this.readResponse(pendingTask, true);
@@ -232,7 +258,7 @@ public class RpcTcpClient implements RpcClient {
         });
 
         try{
-            this.logger.debug("reading response from socket...");
+	    logger.debug("reading response from socket...");
 	    AsyncUtility.readFromChannel(getConnection(), task.input, task, handler);
         }catch(Exception readError){
             logger.info("failed to read from socket", readError);
@@ -248,8 +274,13 @@ public class RpcTcpClient implements RpcClient {
      */
     private <V, I> CompletionHandler<V, AsyncTask<I>> handlerFrom(BiConsumer<V, AsyncTask<I>> completed) {
         return AsyncUtility.handlerFrom(completed, (Throwable error, AsyncTask<I> context) -> {
-	    if (this.logger.isInfoEnabled()) {
-		this.logger.info("socket error", error);
+	    if (logger.isInfoEnabled()) {
+		try {
+		    logger.info("socket(" + (connection != null
+			    ? connection.getLocalAddress().toString() + "-->" + connection.getRemoteAddress().toString()
+			    : "") + ") error", error);
+		} catch (Exception e) {
+		}
 	    }
 	    context.future.completeExceptionally(error);
 	    closeSocket();
@@ -257,8 +288,8 @@ public class RpcTcpClient implements RpcClient {
     }
 
     private synchronized void closeSocket(){
-	if (this.logger.isDebugEnabled()) {
-	    this.logger.debug("close the socket due to errors");
+	if (logger.isDebugEnabled()) {
+	    logger.debug("close the socket due to errors");
 	}
         try{
             if(this.connection != null){
@@ -267,8 +298,8 @@ public class RpcTcpClient implements RpcClient {
                 this.connection = null;
             }
         }catch(IOException ex){
-	    if (this.logger.isInfoEnabled()) {
-		this.logger.info("failed to close socket", ex);
+	    if (logger.isInfoEnabled()) {
+		logger.info("failed to close socket", ex);
 	    }
         }
 

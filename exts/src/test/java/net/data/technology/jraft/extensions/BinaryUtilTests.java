@@ -20,6 +20,7 @@ package net.data.technology.jraft.extensions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.ByteBuffer;
 import java.util.Calendar;
 import java.util.Random;
 
@@ -79,13 +80,13 @@ public class BinaryUtilTests {
         response.setNextIndex(this.random.nextLong());
 
         byte[] data = BinaryUtils.messageToBytes(response);
-        RaftResponseMessage response1 = BinaryUtils.bytesToResponseMessage(data);
-        assertEquals(response.getMessageType(), response1.getMessageType());
-        assertEquals(response.isAccepted(), response1.isAccepted());
-        assertEquals(response.getSource(), response1.getSource());
-        assertEquals(response.getDestination(), response1.getDestination());
-        assertEquals(response.getTerm(), response1.getTerm());
-        assertEquals(response.getNextIndex(), response1.getNextIndex());
+	Tuple3<RaftResponseMessage, Integer, Integer> tuple3 = BinaryUtils.bytesToResponseMessage(data);
+	assertEquals(response.getMessageType(), tuple3._1().getMessageType());
+	assertEquals(response.isAccepted(), tuple3._1().isAccepted());
+	assertEquals(response.getTerm(), tuple3._1().getTerm());
+	assertEquals(response.getNextIndex(), tuple3._1().getNextIndex());
+	assertEquals(response.getSource().getBytes().length, tuple3._2().intValue());
+	assertEquals(response.getDestination().getBytes().length, tuple3._3().intValue());
     }
 
     @Test
@@ -109,18 +110,24 @@ public class BinaryUtilTests {
         System.arraycopy(data, 0, header, 0, header.length);
         byte[] logData = new byte[data.length - BinaryUtils.RAFT_REQUEST_HEADER_SIZE];
         System.arraycopy(data, BinaryUtils.RAFT_REQUEST_HEADER_SIZE, logData, 0, logData.length);
-        Pair<RaftRequestMessage, Integer> result = BinaryUtils.bytesToRequestMessage(header);
-        assertEquals(logData.length, result.getSecond().intValue());
-        result.getFirst().setLogEntries(BinaryUtils.bytesToLogEntries(logData));
-        assertEquals(request.getMessageType(), result.getFirst().getMessageType());
-        assertEquals(request.getCommitIndex(), result.getFirst().getCommitIndex());
-        assertEquals(request.getDestination(), result.getFirst().getDestination());
-        assertEquals(request.getLastLogIndex(), result.getFirst().getLastLogIndex());
-        assertEquals(request.getLastLogTerm(), result.getFirst().getLastLogTerm());
-        assertEquals(request.getSource(), result.getFirst().getSource());
-        assertEquals(request.getTerm(), result.getFirst().getTerm());
-        for(int i = 0; i < entries.length; ++i){
-            assertTrue(this.logEntriesEquals(entries[i], result.getFirst().getLogEntries()[i]));
+	Tuple4<RaftRequestMessage, Integer, Integer, Integer> result = BinaryUtils.bytesToRequestMessage(header);
+	assertEquals(logData.length, result._2().intValue() + result._3().intValue() + result._4().intValue());
+	ByteBuffer buffer = ByteBuffer.wrap(logData);
+	buffer.flip();
+	result._1().setSource(BinaryUtils.bufferGetString(buffer, result._2()));
+	result._1().setDestination(BinaryUtils.bufferGetString(buffer, result._3()));
+	logData = new byte[result._4()];
+	buffer.get(logData);
+	result._1().setLogEntries(BinaryUtils.bytesToLogEntries(logData));
+        assertEquals(request.getMessageType(), result._1().getMessageType());
+        assertEquals(request.getCommitIndex(), result._1().getCommitIndex());
+        assertEquals(request.getDestination(), result._1().getDestination());
+        assertEquals(request.getLastLogIndex(), result._1().getLastLogIndex());
+        assertEquals(request.getLastLogTerm(), result._1().getLastLogTerm());
+        assertEquals(request.getSource(), result._1().getSource());
+        assertEquals(request.getTerm(), result._1().getTerm());
+	for (int i = 0; i < entries.length; ++i) {
+            assertTrue(this.logEntriesEquals(entries[i], result._1().getLogEntries()[i]));
         }
     }
 

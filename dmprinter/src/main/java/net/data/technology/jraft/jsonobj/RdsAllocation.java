@@ -25,6 +25,15 @@ public class RdsAllocation {
 
     /**
      * 
+     * <p>
+     * Description: 默认构造方法
+     * </p>
+     */
+    public RdsAllocation() {
+    }
+
+    /**
+     * 
      * 根据参数构造 类{@link RdsAllocation} 对象
      * 
      * @param hcsId

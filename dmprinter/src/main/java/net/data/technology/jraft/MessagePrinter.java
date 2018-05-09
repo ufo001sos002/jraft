@@ -51,7 +51,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import org.apache.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.extensions.AsyncUtility;
 
@@ -59,6 +60,10 @@ import net.data.technology.jraft.extensions.AsyncUtility;
  * 消息打印状态机 实现 {@link StateMachine} 接口
  */
 public class MessagePrinter implements StateMachine {
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(MessagePrinter.class);
 	/**
 	 * 快照存储地址 对象
 	 */
@@ -85,10 +90,6 @@ public class MessagePrinter implements StateMachine {
      */
     private int port;
     /**
-     * 原生日志对象
-     */
-    private org.apache.log4j.Logger logger;
-    /**
      * 端口监听 对象
      */
     private AsynchronousServerSocketChannel listener;
@@ -113,7 +114,6 @@ public class MessagePrinter implements StateMachine {
      */
     public MessagePrinter(Path baseDir, int listeningPort){
         this.port = listeningPort;
-        this.logger = LogManager.getLogger(getClass());
         this.snapshotStore = baseDir.resolve("snapshots");
         this.commitIndex = 0;
         if(!Files.isDirectory(this.snapshotStore)){
@@ -216,7 +216,7 @@ public class MessagePrinter implements StateMachine {
             reader.close();
             input.close();
         }catch(Exception error){
-            LogManager.getLogger(getClass()).error("failed to apply the snapshot", error);
+	    logger.error("failed to apply the snapshot", error);
             return false;
         }
         return true;
@@ -238,7 +238,7 @@ public class MessagePrinter implements StateMachine {
             snapshotFile.close();
             return bytesRead;
         }catch(Exception error){
-            LogManager.getLogger(getClass()).error("failed read data from snapshot", error);
+	    logger.error("failed read data from snapshot", error);
             return -1;
         }
     }
@@ -318,7 +318,7 @@ public class MessagePrinter implements StateMachine {
                 return new Snapshot(maxLastLogIndex, term, config, latestSnapshot.toFile().length());
             }
         }catch(Exception error){
-            LogManager.getLogger(getClass()).error("failed read snapshot info snapshot store", error);
+	    logger.error("failed read snapshot info snapshot store", error);
         }
 
         return null;
@@ -589,7 +589,7 @@ public class MessagePrinter implements StateMachine {
 
     private <V, A> CompletionHandler<V, A> handlerFrom(BiConsumer<V, A> completed, AsynchronousSocketChannel connection) {
         return AsyncUtility.handlerFrom(completed, (Throwable error, A attachment) -> {
-                        this.logger.info("socket server failure", error);
+                        logger.info("socket server failure", error);
                         if(connection != null){
                             closeSocket(connection);
                         }
@@ -600,7 +600,7 @@ public class MessagePrinter implements StateMachine {
         try{
             connection.close();
         }catch(IOException ex){
-            this.logger.info("failed to close client socket", ex);
+            logger.info("failed to close client socket", ex);
         }
     }
 

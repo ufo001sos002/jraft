@@ -28,8 +28,8 @@ import org.apache.http.concurrent.FutureCallback;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.nio.client.CloseableHttpAsyncClient;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,16 +39,18 @@ import net.data.technology.jraft.RaftResponseMessage;
 import net.data.technology.jraft.RpcClient;
 
 public class HttpRpcClient implements RpcClient {
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(HttpRpcClient.class);
     private String serverUrl;
     private CloseableHttpAsyncClient httpClient;
     private Gson gson;
-    private Logger logger;
 
     public HttpRpcClient(String serverUrl){
         this.serverUrl = serverUrl;
         this.httpClient = HttpAsyncClients.createDefault();
         this.gson = new GsonBuilder().create();
-        this.logger = LogManager.getLogger(getClass());
     }
 
     @Override
@@ -62,7 +64,9 @@ public class HttpRpcClient implements RpcClient {
             @Override
             public void completed(HttpResponse result) {
                 if(result.getStatusLine().getStatusCode() != 200){
-                    logger.info("receive an response error code " + String.valueOf(result.getStatusLine().getStatusCode()) + " from server");
+		    if (logger.isInfoEnabled())
+			logger.info(String.format("receive an response error code "
+				+ String.valueOf(result.getStatusLine().getStatusCode()) + " from server"));
                     future.completeExceptionally(new IOException("Service Error"));
                 }
 
@@ -71,7 +75,7 @@ public class HttpRpcClient implements RpcClient {
                     RaftResponseMessage response = gson.fromJson(reader, RaftResponseMessage.class);
                     future.complete(response);
                 }catch(Throwable error){
-                    logger.info("fails to parse the response from server due to errors", error);
+		    logger.error("fails to parse the response from server due to errors", error);
                     future.completeExceptionally(error);
                 }
             }

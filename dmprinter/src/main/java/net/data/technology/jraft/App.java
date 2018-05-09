@@ -35,7 +35,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import net.data.technology.jraft.extensions.FileBasedServerStateManager;
-import net.data.technology.jraft.extensions.Log4jLoggerFactory;
 import net.data.technology.jraft.extensions.RpcTcpClientFactory;
 import net.data.technology.jraft.extensions.RpcTcpListener;
 import net.data.technology.jraft.jsonobj.HCSClusterAllConfig;
@@ -111,7 +110,6 @@ public class App
 		stateMachine,
                 raftParameters,
                 new RpcTcpListener(localEndpoint.getPort(), executor),
-                new Log4jLoggerFactory(),
                 new RpcTcpClientFactory(executor),
                 executor);
         RaftConsensus.run(context);
@@ -129,7 +127,7 @@ public class App
 		.getClusterConfigurationFromHCSClusterAllConfig(hcsClusterAllConfig);
 	RaftClient client = new RaftClient(
 		new RpcTcpClientFactory(new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors())),
-		configuration, new Log4jLoggerFactory());
+		configuration);
 	while (true) {
 	    System.out.print("Message:");
 	    String message = reader.readLine();
@@ -170,13 +168,13 @@ public class App
 		continue;
 	    }
 
-	    boolean accepted = client.appendEntries(new byte[][] { message.getBytes() }).get();
-	    System.out.println("Accepted: " + String.valueOf(accepted));
+//	    boolean accepted = client.appendEntries(new byte[][] { message.getBytes() }).get();
+//	    System.out.println("Accepted: " + String.valueOf(accepted));
 	}
     }
 
     private static void executeAsClient(ClusterConfiguration configuration, ExecutorService executor) throws Exception {
-        RaftClient client = new RaftClient(new RpcTcpClientFactory(executor), configuration, new Log4jLoggerFactory());
+	RaftClient client = new RaftClient(new RpcTcpClientFactory(executor), configuration);
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         while(true){
             System.out.print("Message:");

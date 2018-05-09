@@ -29,8 +29,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Properties;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -44,6 +44,10 @@ import net.data.technology.jraft.ServerStateManager;
  * 基于文件服务器状态管理
  */
 public class FileBasedServerStateManager implements ServerStateManager {
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(FileBasedServerStateManager.class);
     /**
      * 状态文件名常量
      */
@@ -64,10 +68,6 @@ public class FileBasedServerStateManager implements ServerStateManager {
      * 基于文件的顺序数据记录存储对象
      */
     private FileBasedSequentialLogStore logStore;
-    /**
-     * 原生日志对象
-     */
-    private Logger logger;
     /**
      * 数据目录对象
      */
@@ -100,7 +100,6 @@ public class FileBasedServerStateManager implements ServerStateManager {
     public FileBasedServerStateManager(Path dataDirectory, String serverId) {
         this.logStore = new FileBasedSequentialLogStore(dataDirectory);// 构造数据记录 存储对象
 	this.container = dataDirectory;
-        this.logger = LogManager.getLogger(getClass());
         try{
 	    if (serverId == null) {
 		Properties props = new Properties();
@@ -115,7 +114,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
             this.serverStateFile = new RandomAccessFile(this.container.resolve(STATE_FILE).toString(), "rw");
 	    this.serverStateFile.seek(0);// 打开并定位 服务器状态文件 写入位置
         }catch(IOException exception){
-            this.logger.error("failed to create/open server state file", exception);
+            logger.error("failed to create/open server state file", exception);
             throw new IllegalArgumentException("cannot create/open the state file", exception);
         }
     }
@@ -141,7 +140,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
             ClusterConfiguration config = gson.fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), ClusterConfiguration.class);
             return config;
         }catch(IOException error){
-            this.logger.error("failed to read cluster configuration", error);
+            logger.error("failed to read cluster configuration", error);
             throw new RuntimeException("failed to read in cluster config", error);
         }finally{
             if(stream != null){
@@ -165,7 +164,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
             output.flush();
             output.close();
         } catch (IOException error) {
-            this.logger.error("failed to save cluster config to file", error);
+            logger.error("failed to save cluster config to file", error);
         }
     }
 
@@ -186,7 +185,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
             this.serverStateFile.write(buffer.array());
             this.serverStateFile.seek(0);
         }catch(IOException ioError){
-            this.logger.error("failed to write to the server state file", ioError);
+            logger.error("failed to write to the server state file", ioError);
             throw new RuntimeException("fatal I/O error while writing to the state file", ioError);
         }
     }
@@ -214,7 +213,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
 	    this.serverStateFile.seek(0);
             return state;
         }catch(IOException ioError){
-            this.logger.error("failed to read from the server state file", ioError);
+            logger.error("failed to read from the server state file", ioError);
             throw new RuntimeException("fatal I/O error while reading from state file", ioError);
         }
     }
@@ -232,7 +231,7 @@ public class FileBasedServerStateManager implements ServerStateManager {
             this.serverStateFile.close();
             this.logStore.close();
         }catch(IOException exception){
-            this.logger.info("failed to shutdown the server state manager due to io error", exception);
+            logger.info("failed to shutdown the server state manager due to io error", exception);
         }
     }
 
@@ -245,11 +244,11 @@ public class FileBasedServerStateManager implements ServerStateManager {
             }
 
             if(offset < buffer.length){
-                this.logger.error(String.format("only %d bytes are read while %d bytes are desired, bad file", offset, buffer.length));
+                logger.error(String.format("only %d bytes are read while %d bytes are desired, bad file", offset, buffer.length));
                 throw new RuntimeException("bad file, insufficient file data for reading");
             }
         }catch(IOException exception){
-            this.logger.error("failed to read and fill the buffer", exception);
+            logger.error("failed to read and fill the buffer", exception);
             throw new RuntimeException(exception.getMessage(), exception);
         }
     }

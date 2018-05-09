@@ -20,12 +20,16 @@ package net.data.technology.jraft;
 import java.util.Calendar;
 import java.util.Random;
 
-import org.apache.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DummyMessageHandler implements RaftMessageHandler {
 
     private Random random = new Random(Calendar.getInstance().getTimeInMillis());
-    private org.apache.log4j.Logger logger = LogManager.getLogger(getClass());
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(Middleware.class);
 
     @Override
     public RaftResponseMessage processRequest(RaftRequestMessage request) {

@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.RaftMessageHandler;
 import net.data.technology.jraft.RaftRequestMessage;
@@ -45,13 +45,13 @@ import net.data.technology.jraft.RpcListener;
  */
 public class RpcTcpListener implements RpcListener {
     /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(RpcTcpListener.class);
+    /**
      * RPC TCP 监听端口
      */
     private int port;
-    /**
-     * 当前类 日志输出对象(原生)
-     */
-    private Logger logger;
     /**
      * RPC TCP Server 通道对象
      */
@@ -77,7 +77,6 @@ public class RpcTcpListener implements RpcListener {
     public RpcTcpListener(int port, ExecutorService executorService){
         this.port = port;
         this.executorService = executorService;
-        this.logger = LogManager.getLogger(getClass());
         this.connections = Collections.synchronizedList(new LinkedList<AsynchronousSocketChannel>());
     }
 
@@ -172,6 +171,7 @@ public class RpcTcpListener implements RpcListener {
                                 closeSocket(connection);
                             }else{
                                 try{
+                                    logBuffer.flip();
                                     processRequest(connection, BinaryUtils.bufferToRequestMessage(requestInfo, logBuffer), handler);
                                 }catch(Throwable error){
                                 	if(logger.isInfoEnabled()) {
@@ -218,7 +218,8 @@ public class RpcTcpListener implements RpcListener {
                 		logger.debug("response message sent.");
                 	}
                     if(connection.isOpen()){
-                        logger.debug("try to read next request");
+				if (logger.isDebugEnabled())
+				    logger.debug("try to read next request");
                         readRequest(connection, messageHandler); // 循环读包
                     }
                 }
@@ -237,7 +238,11 @@ public class RpcTcpListener implements RpcListener {
      */
     private <V, A> CompletionHandler<V, A> handlerFrom(BiConsumer<V, A> completed, AsynchronousSocketChannel connection) {
         return AsyncUtility.handlerFrom(completed, (Throwable error, A attachment) -> {
-                        this.logger.info("socket server failure", error);
+                        try {
+		if (logger.isInfoEnabled())
+			    logger.info("socket("+(connection!= null ? connection.getLocalAddress()+","+connection.getRemoteAddress() : "")+") server failure", error);
+			} catch (Exception e) {
+			}
                         if(connection != null){
                             closeSocket(connection);
                         }
@@ -252,7 +257,7 @@ public class RpcTcpListener implements RpcListener {
             this.connections.remove(connection);
             connection.close();
         }catch(IOException ex){
-            this.logger.info("failed to close client socket", ex);
+            logger.info("failed to close client socket", ex);
         }
     }
 }

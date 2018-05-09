@@ -32,10 +32,6 @@ public class RaftContext {
      */
     private RpcListener rpcListener;
     /**
-     * 本地非原生日志工厂对象
-     */
-    private LoggerFactory loggerFactory;
-    /**
      * RPC客户端工厂对象
      */
     private RpcClientFactory rpcClientFactory;
@@ -59,11 +55,11 @@ public class RaftContext {
      * @param stateMachine 设置 {@link #stateMachine} 状态机对象
      * @param raftParameters 设置 {@link #raftParameters} Raft参数对象
      * @param rpcListener 设置{@link #rpcListener} 当前服务器端监听RPC对象 
-     * @param logFactory 设置{@link #loggerFactory} 本地非原生日志工厂对象
      * @param rpcClientFactory 设置{@link #rpcClientFactory} RPC客户端工厂对象
      */
-    public RaftContext(ServerStateManager stateManager, StateMachine stateMachine, RaftParameters raftParameters, RpcListener rpcListener, LoggerFactory logFactory, RpcClientFactory rpcClientFactory){
-        this(stateManager, stateMachine, raftParameters, rpcListener, logFactory, rpcClientFactory, null);
+    public RaftContext(ServerStateManager stateManager, StateMachine stateMachine, RaftParameters raftParameters,
+	    RpcListener rpcListener, RpcClientFactory rpcClientFactory) {
+	this(stateManager, stateMachine, raftParameters, rpcListener, rpcClientFactory, null);
     }
     
     /**
@@ -73,17 +69,16 @@ public class RaftContext {
      * @param stateMachine  设置 {@link #stateMachine} 状态机对象
      * @param raftParameters 设置 {@link #raftParameters} Raft参数对象
      * @param rpcListener 设置{@link #rpcListener} 当前服务器端监听RPC对象 
-     * @param logFactory 设置{@link #loggerFactory} 本地非原生日志工厂对象
      * @param rpcClientFactory 设置{@link #rpcClientFactory} RPC客户端工厂对象
      * @param scheduledExecutor 设置{@link #scheduledExecutor}计划线程池 可为null ，则以 {@link Runtime#availableProcessors()} 为核心线程数
      */
-    public RaftContext(ServerStateManager stateManager, StateMachine stateMachine, RaftParameters raftParameters, RpcListener rpcListener, LoggerFactory logFactory, RpcClientFactory rpcClientFactory, ScheduledThreadPoolExecutor scheduledExecutor){
+    public RaftContext(ServerStateManager stateManager, StateMachine stateMachine, RaftParameters raftParameters,
+	    RpcListener rpcListener, RpcClientFactory rpcClientFactory, ScheduledThreadPoolExecutor scheduledExecutor) {
         this.serverStateManager = stateManager;
         this.stateMachine = stateMachine;
         this.raftParameters = raftParameters;
         this.rpcClientFactory = rpcClientFactory;
         this.rpcListener = rpcListener;
-        this.loggerFactory = logFactory;
         this.scheduledExecutor = scheduledExecutor;
         if(this.scheduledExecutor == null){
             this.scheduledExecutor = new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors());
@@ -115,13 +110,6 @@ public class RaftContext {
 	 */
 	public RpcListener getRpcListener() {
 		return rpcListener;
-	}
-
-	/**
-	 * @return 返回 {@link #loggerFactory}值
-	 */
-	public LoggerFactory getLoggerFactory() {
-		return loggerFactory;
 	}
 
 	/**

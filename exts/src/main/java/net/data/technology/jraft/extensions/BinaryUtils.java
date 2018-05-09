@@ -24,7 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import net.data.technology.jraft.LogEntry;
 import net.data.technology.jraft.LogValueType;
@@ -35,9 +36,13 @@ import net.data.technology.jraft.RaftResponseMessage;
  * 二进制转换工具类
  */
 public class BinaryUtils {
-	/**
-	 * Raft 回包固定 头 大小(当前为整个包大小)
-	 */
+    /**
+     * 日志对象
+     */
+    private static final Logger logger = LoggerFactory.getLogger(BinaryUtils.class);
+    /**
+     * Raft 回包固定 头 大小(当前为整个包大小)
+     */
     public static final int RAFT_RESPONSE_HEADER_SIZE = Integer.BYTES * 2 + Long.BYTES * 2 + 2;
     /**
      * Raft 请求包 头固定 大小(当前只为固定包头大小  不包含日志体具体内容)
@@ -111,7 +116,8 @@ public class BinaryUtils {
     }
 
     /**
-     * 从buffer中拿对应长度的 字符串
+     * 从buffer中拿对应长度的 字符串 <br>
+     * <b>注：可直接get的ByteBuffer,无需再次 {@link ByteBuffer#flip()} </b>
      * 
      * @param buffer
      * @return
@@ -164,9 +170,10 @@ public class BinaryUtils {
     }
     
     /**
-     * 设置对应值
+     * 设置对应值<br>
+     * <b>注：可直接get的ByteBuffer,无需再次 {@link ByteBuffer#flip()} </b>
      * 
-     * @param tuple4
+     * @param tuple3
      * @param bufferData
      * @return
      */
@@ -207,7 +214,7 @@ public class BinaryUtils {
         requestBuffer.put(longToBytes(request.getCommitIndex()));
 	requestBuffer.put(intToBytes(source.length)); // 4
 	requestBuffer.put(intToBytes(destination.length)); // 4
-        requestBuffer.put(intToBytes(logSize));
+	requestBuffer.put(intToBytes(logSize));
 	requestBuffer.put(source);
 	requestBuffer.put(destination);
         if(buffersForLogs != null){
@@ -245,7 +252,8 @@ public class BinaryUtils {
     }
     
     /**
-     * 设置对应值
+     * 设置对应值<br>
+     * <b>注：可直接get的ByteBuffer,无需再次 {@link ByteBuffer#flip()} </b>
      * 
      * @param tuple4
      * @param bufferData
@@ -256,9 +264,11 @@ public class BinaryUtils {
 	RaftRequestMessage message = tuple4._1();
 	message.setSource(bufferGetString(bufferData, tuple4._2()));
 	message.setDestination(bufferGetString(bufferData, tuple4._3()));
-	byte[] data = new byte[tuple4._4()];
-	bufferData.get(data);
-	message.setLogEntries(bytesToLogEntries(data));
+	if (tuple4._4() > 0) {
+	    byte[] data = new byte[tuple4._4()];
+	    bufferData.get(data);
+	    message.setLogEntries(bytesToLogEntries(data));
+	}
 	return message;
     }
     
@@ -277,7 +287,7 @@ public class BinaryUtils {
             output.flush();
             return output.toByteArray();
         }catch(IOException exception){
-            LogManager.getLogger("BinaryUtil").error("failed to serialize LogEntry to memory", exception);
+	    logger.error("failed to serialize LogEntry to memory", exception);
             throw new RuntimeException("Running into bad situation, where memory may not be sufficient", exception);
         }
     }

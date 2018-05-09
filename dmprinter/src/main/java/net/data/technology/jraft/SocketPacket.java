@@ -397,7 +397,7 @@ public class SocketPacket {
 	    for (int i = 0; i < data.length; i++) {
 		debugValue.append(' ').append(data[i]);
 	    }
-	    debugValue.append(' ').append("]--->data to json str: ");
+	    debugValue.append(' ').append("]\r\n--->data to json str: ");
 	    if (data.length > 0) {
 		debugValue.append(new String(data, Middleware.SYSTEM_CHARSET));
 	    }

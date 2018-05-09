@@ -320,4 +320,15 @@ public class PeerServer {
             this.currentHeartbeatInterval = this.heartbeatInterval;
         }
     }
+
+    /**
+     * 
+     * @return
+     * @see java.lang.Object#toString()
+     */
+    @Override
+    public String toString() {
+	return "PeerServer [clusterConfig=" + clusterConfig + ", busyFlag=" + busyFlag.get() + "]";
+    }
+
 }
