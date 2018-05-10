@@ -158,7 +158,15 @@
 
 
 
+if (logger.isDebugEnabled())
+		logger.debug(String.format(
 
+if (logger.isInfoEnabled())
+			logger.info(String.format(
+
+logger.error(String.format(
+
+logger.warn(String.format(
 
 
 
@@ -170,12 +178,3 @@
 
 分配实例 22   {"taskId":"taskId22","rdsInstances":[{"rdsId":"HotDB_RDS_MM01_1","vip":"192.168.200.214","port":"3323","startAt":"2017-06-30 00:00:01","endAt":"2018-12-30 23:59:59"}]}
 
-if (logger.isDebugEnabled())
-		logger.debug(String.format(
-
-if (logger.isInfoEnabled())
-			logger.info(String.format(
-
-logger.error(String.format(
-
-logger.warn(String.format(

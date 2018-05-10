@@ -531,12 +531,12 @@ public class Middleware implements StateMachine {
 	    // 初始化集群
 	    ServerStateManager stateManager = new FileBasedServerStateManager(getClusterDirectoryPath(),
 		    this.rdsServerId);
-	    // if (stateManager.existsClusterConfiguration()) { // 本地存在配置(走快照)
-	    // config = stateManager.loadClusterConfiguration();
-	    // } else { // 初次启动本地无配置
+	     if (stateManager.existsClusterConfiguration()) { // 本地存在配置(走快照)
+		config = stateManager.loadClusterConfiguration();
+	     } else { // 初次启动本地无配置
 		config = getClusterConfigurationFromHCSClusterAllConfig(hcsClusterAllConfig);
 		stateManager.saveClusterConfiguration(config);
-	    // }
+	    }
 	    try {
 		this.sslClient.setHeartbeatInterval(hcsClusterAllConfig.getSystemConfig().getHeartbeatToM());
 		this.servers = config.getServers();
@@ -741,12 +741,17 @@ public class Middleware implements StateMachine {
 	    return;
 	}
 	// 先追加 实例至 JSON对象并保存
+	List<RDSInstanceInfo> rdsInstanceInfoList = this.hcsClusterAllConfig.getRdsInstances();
+	if (rdsInstanceInfoList == null) {
+	    rdsInstanceInfoList = new ArrayList<RDSInstanceInfo>();
+	    this.hcsClusterAllConfig.setRdsInstances(rdsInstanceInfoList);
+	}
 	for (RDSInstanceInfo rds : rdss) {
 	    if (rdsInstanceInfoMap.containsKey(rds.getRdsId())) {
 		continue;
 	    }
 	    rdsInstanceInfoMap.put(rds.getRdsId(), rds);
-	    this.hcsClusterAllConfig.getRdsInstances().add(rds);
+	    rdsInstanceInfoList.add(rds);
 	}
 	this.saveConfigToFile();
 	if (this.serverRole != ServerRole.Leader) {
@@ -919,9 +924,11 @@ public class Middleware implements StateMachine {
 	    if (rds.getPort() != null) {
 		rdsInstanceInfo.setPort(rds.getPort());
 	    }
-	    rdsInstance = rdsInstanceMap.get(rds.getRdsId());
-	    if (rdsInstance != null && rdsInstanceInfo.getStatus() == RDSInstance.RDS_INSTANCE_STATUS_STOCK) {
+	    if(rdsInstanceInfo.getStatus() == RDSInstance.RDS_INSTANCE_STATUS_STOCK) {
 		rdsInstanceInfo.setStatus(RDSInstance.RDS_INSTANCE_STATUS_ALLOCATED);
+	    }
+	    rdsInstance = rdsInstanceMap.get(rds.getRdsId());
+	    if (rdsInstance != null) {
 		allocates.add(rdsInstance);
 	    }
 	}
@@ -1219,8 +1226,8 @@ public class Middleware implements StateMachine {
 	// 所以 对比监管实例map，一切按最新的配置 进行 即可，该监管监管该监听监听，该取消监听则取消监听
 	// ，并通过commitIndex来判断是否已经应用过的记录
 	ClusterConfiguration newConfig = getClusterConfigurationFromHCSClusterAllConfig(newHcsClusterAllConfig);
-	this.config.setLogIndex(newConfig.getLogIndex());
-	this.config.setLastLogIndex(newConfig.getLastLogIndex());
+	// this.config.setLogIndex(newConfig.getLogIndex());
+	// this.config.setLastLogIndex(newConfig.getLastLogIndex());
 	
 	synchronized (servers) {
 	    ArrayList<ClusterServer> adds = Tools.getExclusiveList(servers, newConfig.getServers());
@@ -1536,9 +1543,14 @@ public class Middleware implements StateMachine {
 	    HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
 	    t_hcsClusterAllConfig.setTaskId("-1");
 	    ArrayList<RdsAllocation> t_RdsAllocations = new ArrayList<RdsAllocation>();
+	    List<RdsAllocation> rdsAllocations = this.hcsClusterAllConfig.getRdsAllocations();
+	    if (rdsAllocations == null) {// 当前节点 还未有 实例分配 集合JSON对象
+		rdsAllocations = new ArrayList<RdsAllocation>();
+		this.hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	    }
 	    RdsAllocation t_rdsAllocation = null;
 	    for (ClusterServer server : this.servers) {
-		for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
+		for (RdsAllocation rdsAllocation : rdsAllocations) {
 		    if (server.getId().equals(rdsAllocation.getHcsId())) {
 			t_rdsAllocation = new RdsAllocation(rdsAllocation.getHcsId());
 			t_rdsAllocation.setRdsIds(rdsAllocation.getRdsIds());
@@ -1595,7 +1607,12 @@ public class Middleware implements StateMachine {
 	// todo 实例分配的时候 需判断状态后再进行,之前需进行实例状态同步
 	if (StateMachine.STATUS_OFFLINE == status) { // 不在线 则移除 上面所有实例
 	    ArrayList<String> addRdss = new ArrayList<String>();
-	    for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
+	    List<RdsAllocation> rdsAllocations = this.hcsClusterAllConfig.getRdsAllocations();
+	    if (rdsAllocations == null) {// 当前节点 还未有 实例分配 集合JSON对象
+		rdsAllocations = new ArrayList<RdsAllocation>();
+		this.hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	    }
+	    for (RdsAllocation rdsAllocation : rdsAllocations) {
 		if (hcsId.equals(rdsAllocation.getHcsId())) {
 		    addRdss.addAll(rdsAllocation.getRdsIds());
 		}
@@ -1656,23 +1673,23 @@ public class Middleware implements StateMachine {
 		adds.add(rdsId);
 	    }
 	    // 生成最新的 动态分配 请求
-	    ArrayList<RdsAllocation> rdsAllocations = new ArrayList<RdsAllocation>();
+	    ArrayList<RdsAllocation> newRdsAllocations = new ArrayList<RdsAllocation>();
 	    if (addRdss.size() > 0) {
 		RdsAllocation rdsAllocation = new RdsAllocation(hcsId);
 		rdsAllocation.setDeletes(addRdss);
-		rdsAllocations.add(rdsAllocation);
+		newRdsAllocations.add(rdsAllocation);
 	    }
 	    if (hcsAddsMap.size() > 0) {
 		for (Entry<String, ArrayList<String>> set : hcsAddsMap.entrySet()) {
-		    rdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
+		    newRdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
 		}
 	    }
-	    if (rdsAllocations.size() == 0) {
+	    if (newRdsAllocations.size() == 0) {
 		return;
 	    }
 	    HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
 	    t_hcsClusterAllConfig.setTaskId("-1");
-	    t_hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	    t_hcsClusterAllConfig.setRdsAllocations(newRdsAllocations);
 	    SocketPacket socketPacket = new SocketPacket(MsgSign.TYPE_RDS_SERVER, MsgSign.RAFT_RDS_CHANGE,
 		    t_hcsClusterAllConfig.toString().getBytes(StandardCharsets.UTF_8));
 	    raftMessageSender.appendEntries(new byte[][] { socketPacket.writeBytes() })
@@ -1742,6 +1759,10 @@ public class Middleware implements StateMachine {
 	List<ClusterServer> removes = new ArrayList<ClusterServer>();
 	List<HCSNode> newHCSGroup = new ArrayList<HCSNode>();
 	List<HCSNode> oldHcsGroup = hcsClusterAllConfig.getHcsGroup();
+	if (oldHcsGroup == null) {
+	    oldHcsGroup = new ArrayList<HCSNode>();
+	    hcsClusterAllConfig.setHcsGroup(oldHcsGroup);
+	}
 	newHCSGroup.addAll(oldHcsGroup);
 	List<HCSNode> removeNode = new ArrayList<HCSNode>();
 	List<HCSNode> addNode = new ArrayList<HCSNode>();
@@ -1778,7 +1799,12 @@ public class Middleware implements StateMachine {
 	// 获取老的节点分配内容，按理是不需要 在这里清除的，先保留代码
 //	ArrayList<RdsAllocation> removeRdsAllocations = new ArrayList<RdsAllocation>();
 	ArrayList<String> addRdss = new ArrayList<String>();
-	for (RdsAllocation rdsAllocation : this.hcsClusterAllConfig.getRdsAllocations()) {
+	List<RdsAllocation> rdsAllocations = this.hcsClusterAllConfig.getRdsAllocations();
+	if (rdsAllocations == null) {// 当前节点 还未有 实例分配 集合JSON对象
+	    rdsAllocations = new ArrayList<RdsAllocation>();
+	    this.hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	}
+	for (RdsAllocation rdsAllocation : rdsAllocations) {
 	    for (String hcsId : serversRemoved) {
 		if (hcsId.equals(rdsAllocation.getHcsId())) {
 //		    removeRdsAllocations.add(rdsAllocation);
@@ -1805,13 +1831,13 @@ public class Middleware implements StateMachine {
 	    adds.add(rdsId);
 	}
 	// 生成最新的 动态分配 请求
-	ArrayList<RdsAllocation> rdsAllocations = new ArrayList<RdsAllocation>();
+	ArrayList<RdsAllocation> newRDSAllocations = new ArrayList<RdsAllocation>();
 	for (Entry<String, ArrayList<String>> set : hcsAddsMap.entrySet()) {
-	    rdsAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
+	    newRDSAllocations.add(new RdsAllocation(set.getKey(), set.getValue()));
 	}
 	HCSClusterAllConfig t_hcsClusterAllConfig = new HCSClusterAllConfig();
 	t_hcsClusterAllConfig.setTaskId("-1");
-	t_hcsClusterAllConfig.setRdsAllocations(rdsAllocations);
+	t_hcsClusterAllConfig.setRdsAllocations(newRDSAllocations);
 	t_hcsClusterAllConfig.setHcsGroup(newHCSGroup);
 	SocketPacket socketPacket = new SocketPacket(MsgSign.TYPE_RDS_SERVER, MsgSign.RAFT_RDS_CHANGE,
 		t_hcsClusterAllConfig.toString().getBytes(StandardCharsets.UTF_8));

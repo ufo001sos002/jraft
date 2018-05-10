@@ -1933,7 +1933,7 @@ public class RaftServer implements RaftMessageHandler {
                 }catch(Throwable error){
                     logger.error(String.format(
 			    "error %s encountered for committing thread, which should not happen, according to this, state machine may not have further progress, stop the system",
-			    error, error.getMessage()));
+			    error, error.getMessage()), error);
                     server.stateMachine.exit(-1);
                 }
             }

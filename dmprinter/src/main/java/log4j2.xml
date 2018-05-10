@@ -17,5 +17,8 @@
         <Root level="info">
            <AppenderRef ref="Console" /> 
         </Root>
+        <logger name="net.data.technology.jraft.NIOSSLClient" level="info" additivity="false">  
+	      	<AppenderRef ref="Console" />
+	    </logger>
     </Loggers>
 </Configuration>

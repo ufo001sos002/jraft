@@ -112,6 +112,9 @@ public class BinaryUtils {
      * @return
      */
     public static byte[] stringToBytes(String value) {
+	if (value == null) {
+	    return new byte[] {};
+	}
 	return value.getBytes(StandardCharsets.UTF_8);
     }
 

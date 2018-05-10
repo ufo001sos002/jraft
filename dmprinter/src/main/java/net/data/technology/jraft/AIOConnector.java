@@ -23,6 +23,11 @@ public final class AIOConnector
 	attachment._1().setBackendConnection(attachment._2());
 	attachment._2().setId(ID_GENERATOR.getId());
 	attachment._2().setFrontendConnection(attachment._1());
+	try {
+	    attachment._2().asynRead();
+	} catch (Exception e) {
+	    failed(e, attachment);
+	}
     }
 
     @Override
