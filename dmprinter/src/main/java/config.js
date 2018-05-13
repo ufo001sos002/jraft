@@ -185,31 +185,62 @@ logger.warn(String.format(
 
 
 
-// ----------------------------------------------------HotDB Cloud Server Cluster 通讯协议完整版--------------------------------------------------------------------------------------
-
-// ---------------------------------------1.2.1 M to RS_RS 编组信息   2--------------------------------------------------
+// ----------------------------------------------------HotDB Cloud Server Cluster 通讯协议增加或修改的------------------------------------------------------
+先看老的 废弃 或 需要修改的  然后 再考虑需要 新增的 新的flags以及错误code
+// -----------------完整 未带注释版(用于修改 生成 简短JSON)---------------------
 {
     "taskId": "uuid",
-    "currentIp": "127.0.0.1",
-    "managerPort": 3323,
-    "managerUser": "root",
-    "managerPassword": "123456",
-    "namesrvAddr": "127.0.0.1:9786",
-    "topic": "topicName",
-    "tags": "tagsName",
     "systemConfig": {
+        "managerPort": 3323,
+        "managerUser": "root",
+        "managerPassword": "123456",
         "heartbeatToM": 3000,
-        "usingAIO": 1,
         "enableHeartbeat": true,
         "heartbeatPeriod": 3000,
         "heartbeatNextWaitTimes": 3000,
+        "waitForSlaveInFailover": true,
+        
+        "usingAIO": 1,
         "processors": 16,
         "processorExecutor": 4,
         "timerExecutor": 6,
-        "parkPeriod": 100000,
-        "waitForSlaveInFailover": true,
-        
+        "parkPeriod": 100000
     },
+    "hcsGroup": [
+        {
+            "hcsId": "1",
+            "ip": "192.168.200.215",
+            "port": 9001,
+            "status": 0,
+            "sshPort": 22,
+            "isUsedPrvkey": false,
+            "userName": "root",
+            "prvkeyFileContent": "AwABAgM=",
+            "password": "123456"
+        },
+        {
+            "hcsId": "2",
+            "ip": "192.168.200.215",
+            "port": 9002,
+            "status": 0,
+            "sshPort": 22,
+            "isUsedPrvkey": false,
+            "userName": "root",
+            "prvkeyFileContent": "AwABAgM=",
+            "password": "123456"
+        },
+        {
+            "hcsId": "3",
+            "ip": "192.168.200.215",
+            "port": 9003,
+            "status": 0,
+            "sshPort": 22,
+            "isUsedPrvkey": false,
+            "userName": "root",
+            "prvkeyFileContent": "AwABAgM=",
+            "password": "123456"
+        }
+    ],
     "rdsInstances": [
         {
             "rdsId": "HotDB_RDS_MM01_1",
@@ -276,5 +307,135 @@ logger.warn(String.format(
                 "isEnable": true
             }
         }
+    ],
+    "allocationRule": {
+        "rule": 0
+    },
+    "rdsAllocations": [
+        {
+            "hcsId": "1",
+            "rdsIds": [
+                "HotDB_RDS_MM01_1"
+            ],
+            "adds": [
+                "HotDB_RDS_MM01_1"
+            ],
+            "deletes": [
+                "HotDB_RDS_MM01_1"
+            ]
+        }
+    ],
+    "namesrvAddr": "127.0.0.1:9786",
+    "topic": "topicName",
+    "tags": "tagsName",
+    
+}
+
+/**
+以下：
+ HCM_S_S_HCS 表示 HCM 利用 SSL协议    的Socket连接发送消息 至  HCS  
+ HCM_R_S_HCS 表示 HCM 利用 Raft协议 的Socket连接发送消息至   HCS
+ HCS_S_S_HCM 表示 HCS 利用 SSL协议    的Socket连接发送消息 至  HCM  
+ HCS_R_S_HCS 表示 HCS 利用 Raft协议 的Socket连接发送消息至    HCS
+*/
+
+//-------------------------------------1.2.1 HCM_S_S_HCS 配置信息(初次启动时集群配置) flags：2---修改----------------------------------
+/** data：**/
+{
+    "taskId": "uuid", // 任务唯一Id, 由HCM下发时,HCS响应必须带该字段值(HCS集群主动发起时则不需要)
+    "systemConfig": { // HCS集群各节点私有配置(可根据不同服务进行配置下发，各节点独自应用) 目前项不为最终项
+        "managerPort": 3323, // 管理端port
+        "managerUser": "root",// 管理端登录用户
+        "managerPassword": "123456", // 管理端登录密码
+        "heartbeatToM": 3000, // 发送心跳至HCM(ms)
+        "enableHeartbeat": true, //是否启用心跳，是：true，否：false
+        "heartbeatPeriod": 3000, // 心跳检测周期(ms)
+        "heartbeatNextWaitTimes": 3000, // 下次心跳检测等待时间(ms)
+        "waitForSlaveInFailover": true, // 故障切换中是否等待从机追上复// 制，是：true，否：false
+        
+        "usingAIO": 1, //是否使用AIO，是：1，否：0
+        "processors": 16, //处理器数  所有前后连接对象绑定其中一个 （后续可能得考虑一个RDS实例 使用一套processors，互不影响）
+        "processorExecutor": 4, //各处理器线程数  定时心跳等操作kill query、前端连接数据接收至下发MySQL之前处理、hold住等需要
+        "timerExecutor": 6, //定时器线程数
+        "parkPeriod": 100000 // 消息系统空闲时线程休眠周期(ns)
+    },
+    "hcsGroup": [ // HCS 集群节点信息
+        {
+            "hcsId": "1", // HCS id(唯一) 
+            "ip": "192.168.200.215", // HCS 集群通信 IP
+            "port": 9001, // HCS 集群通信 端口
+            "status": 0, // 服务器状态: 0为在线可用(默认), 1为离线
+            "sshPort": 22,// SSH访问端口
+            "isUsedPrvkey": false,// SSH访问 是否使用私钥:true为使用，false为不使用
+            "userName": "root",//SSH访问用户名
+            "prvkeyFileContent": "AwABAgM=",// 对应byte[] 数组对象 ，认证的私钥文件内容(如果为null 则默认使用本地id_rsa私钥文件内容)
+            "password": "123456" // 登录用户密码或私钥密码(密文密码需使用hcsId转换)
+        }
     ]
 }
+/** 回应：
+HCS_S_S_HCM 复用	 1.0.0 Socket响应结果 内容
+**/
+/** 异常code：
+121000：私有配置信息下发 (捕获异常)
+121001：私有配置错误(json信息有误)
+121011：集群信息错误(json信息有误)
+121002：管理端口监听失败
+--------------------------------------以上错误 中间件故障 无法工作 需重新下发配置
+121003：配置文件保存失败  ---------------------（中间件异常，但可正常提供服务）
+-------------------------------------以上121000、121001、121002、121003  code 为 >0  ,message为错误信息
+**/
+
+//-------------------------------------1.3.1 RS to M_自动异常切换 flags：	3-----废弃---------------------------------------
+
+//------------------------------------1.4.1 M to RS_主从手动切换 flags：	4-----废弃--------------------------------------
+
+//------------------------------------1.5.1 M to RS_RDS Server组停用 flags：	5-----废弃--------------------------------------
+
+//------------------------------------1.6.1 M to RS_RDS Server组启用 flags：	6-----废弃--------------------------------------
+
+//------------------------------------1.7.1 M to RS_RDS Server组移除 flags：	7-----废弃--------------------------------------
+
+//------------------------------------1.8.1 HCM_S_S_HCS 配置变更 flags：	8---修改---------------------------------------------
+/** data：**/
+{
+    "taskId": "uuid", // 任务唯一Id, 由HCM下发时,HCS响应必须带该字段值(HCS集群主动发起时则不需要)
+    "systemConfig": { 
+    	// HCS集群各节点私有配置(可根据不同服务进行配置下发，各节点独自应用) 目前项不为最终项,根据实际实现情况再添加
+    }
+}
+/** 回应：
+HCS_S_S_HCM 复用	 1.0.0 Socket响应结果 内容
+**/
+/** 异常code：
+181000：私有配置信息下发 (捕获异常)
+181001：私有配置错误(json信息有误)
+181002：管理端口监听失败
+--------------------------------------以上错误 中间件故障 无法工作 需重新下发配置
+181003：配置文件保存失败  ---------------------（中间件异常，但可正常提供服务）
+-------------------------------------以上181000、181001、181002、181003  code 为 >0  ,message为错误信息
+**/
+
+//------------------------------------1.9.1 M to RS_RDS Server组手动恢复 flags：	9-----废弃-----------------------------------
+
+//------------------------------------2.21.1 HCM_R_S_HCS RDS实例初始化添加 flags：21---修改------------------------------------
+/** data：JSON内容保持不变**/
+
+/**回应：
+HCS_S_S_HCM 复用	 1.0.0 Socket响应结果 内容，但如果多个实例时，且不同HCS节点将上报 同一个任务ID 下不同实例添加情况
+// CODE >0 则code对应的单个具体错误码，message为错误信息
+// CODE = -1 则message为JSON数组信息(即"message":[{code,message}] 其中code = 0 表示成功，>0表示对应错误码，message表示对应 实例ID字符串)
+
+**/
+/** 异常code：
+181000：私有配置信息下发 (捕获异常)
+181001：私有配置错误(json信息有误)
+181002：管理端口监听失败
+--------------------------------------以上错误 中间件故障 无法工作 需重新下发配置
+181003：配置文件保存失败  ---------------------（中间件异常，但可正常提供服务）
+-------------------------------------以上181000、181001、181002、181003  code 为 >0  ,message为错误信息
+**/
+
+
+
+//------------------------------------ HCS_R_S_HCS flags: -----新增--------------------------------------

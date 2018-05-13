@@ -181,7 +181,7 @@ public class Middleware implements StateMachine {
      */
     public static volatile Charset SYSTEM_CHARSET = StandardCharsets.UTF_8;// Charset.forName("UTF-8");
     /**
-     * 节点状态 离线
+     * 节点状态 在线
      */
     public static final int STATUS_ONLINE = 0;
     /**
