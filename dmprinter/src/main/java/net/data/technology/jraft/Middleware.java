@@ -1522,6 +1522,7 @@ public class Middleware implements StateMachine {
     @Override
     public void exit(int code) {
 	logger.warn(String.format("StateMachine exit: %d\n", code));
+	removeFromCluster();
 	System.exit(code);
 
     }

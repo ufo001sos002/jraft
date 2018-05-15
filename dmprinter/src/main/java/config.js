@@ -212,6 +212,7 @@ logger.warn(String.format(
             "ip": "192.168.200.215",
             "port": 9001,
             "status": 0,
+			"role":2,
             "sshPort": 22,
             "isUsedPrvkey": false,
             "userName": "root",
@@ -223,6 +224,7 @@ logger.warn(String.format(
             "ip": "192.168.200.215",
             "port": 9002,
             "status": 0,
+			"role":0,
             "sshPort": 22,
             "isUsedPrvkey": false,
             "userName": "root",
@@ -234,6 +236,7 @@ logger.warn(String.format(
             "ip": "192.168.200.215",
             "port": 9003,
             "status": 0,
+			"role":0,
             "sshPort": 22,
             "isUsedPrvkey": false,
             "userName": "root",
@@ -740,7 +743,14 @@ code = 0 表示成功，message内容忽略
 且当rdsIds 集合不为空时表示 Leader发生切换，新Leader进行节点下监管rdsIds实例确认；同一节点下 rdsIds、adds、deletes内容不冲突
 **/
 {
-	"rdsAllocations": [// 实例分配
+	 "hcsGroup": [  //当前集群所有节点状态 角色（如数组为null或lengt为0 则表示 节点为发生变更）
+        {
+            "hcsId": "1",// HCS id(唯一) 
+            "status": 1,// 服务器状态: 0为在线可用(默认), 1为离线
+			"role":2 // 节点角色：2为Leader(领导者) 1为Candidate(候选者) 其他则为Follower(跟随者)
+        }
+    ],
+	"rdsAllocations": [// 实例分配（如数组为null或lengt为0 则表示 集群下无实例信息）
         {
             "hcsId": "1",// hcs节点id
             "rdsIds": [ // 当前管理实例 
@@ -756,4 +766,24 @@ code = 0 表示成功，message内容忽略
     ]
 }
 
-//------------------------------------ HCS_R_S_HCS flags: -----新增--------------------------------------
+
+// ------------------------------- HCS_S_S_HCM 集群最新状态上报 flags: 103-----新增-------------------
+/**请求说明：当HCS_S_S_HCM断开(网络或HCM重启) 重新连上后，Leader将集群最新状态上报
+**/
+{
+    "hcsGroup": [ //当前集群所有节点状态 角色 (不为null 且集合长度>0)
+        {
+            "hcsId": "1",// HCS id(唯一) 
+            "status": 1,// 服务器状态: 0为在线可用(默认), 1为离线
+			"role":2 // 节点角色：2为Leader(领导者) 1为Candidate(候选者) 其他则为Follower(跟随者)
+        }
+    ],
+    "rdsAllocations": [// 实例分配（如数组为null或lengt为0 则表示 集群下无实例信息）
+        {
+            "hcsId": "1",
+            "rdsIds": [
+                "HotDB_RDS_MM01_1"
+            ]
+        }
+    ]
+}

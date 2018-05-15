@@ -21,16 +21,50 @@ package net.data.technology.jraft;
  * 服务端校色
  */
 public enum ServerRole {
+
     /**
-     * 跟随者
+     * 跟随者 0
      */
-    Follower,
+    Follower(0),
     /**
-     * 候选者
+     * 候选者 1
      */
-    Candidate,
+    Candidate(1),
     /**
-     * 领导者
+     * 领导者 2
      */
-    Leader
+    Leader(2);
+    /**
+     * 枚举值
+     */
+    private int value;
+
+    ServerRole(int value) {
+	this.value = value;
+    }
+
+    /**
+     * @return {@link #value} 的值
+     */
+    public int getValue() {
+	return value;
+    }
+
+    /**
+     * 根据值返回对应枚举值
+     * 
+     * @param value
+     * @return
+     */
+    public static ServerRole getServerRole(int value) {
+	switch (value) {
+	case 2:
+	    return Leader;
+	case 1:
+	    return Candidate;
+	default:
+	    return Follower;
+	}
+    }
+
 }
