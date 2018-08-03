@@ -191,9 +191,6 @@ logger.warn(String.format(
 {
     "taskId": "uuid",
     "systemConfig": {
-        "managerPort": 3323,
-        "managerUser": "root",
-        "managerPassword": "123456",
         "heartbeatToM": 3000,
         "enableHeartbeat": true,
         "heartbeatPeriod": 3000,
@@ -217,7 +214,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
-            "password": "123456"
+            "password": "123456",
+			"managerPort": 3323,
+			"managerUser": "root",
+			"managerPassword": "123456"
         },
         {
             "hcsId": "2",
@@ -229,7 +229,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
-            "password": "123456"
+            "password": "123456",
+			"managerPort": 3323,
+			"managerUser": "root",
+			"managerPassword": "123456"
         },
         {
             "hcsId": "3",
@@ -241,7 +244,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
-            "password": "123456"
+            "password": "123456",
+			"managerPort": 3323,
+			"managerUser": "root",
+			"managerPassword": "123456"
         }
     ],
     "rdsInstances": [
