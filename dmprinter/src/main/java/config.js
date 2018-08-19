@@ -784,12 +784,18 @@ code = 0 表示成功，message内容忽略
         }
     ]
 }
+成为Leader 进行监管实例 确认  则任务ID 以"notifyServerRole_" 开头，整个内容"notifyServerRole_102_Leader hcsId_System.currentTimeMillis()"
+节点离线 Leader进行监管实例变更 则 任务ID以"notifyServerStatus_" 开头，整个内容"notifyServerRole_102_Leader hcsId_System.currentTimeMillis()"
 /**回应：
 HCS_S_S_HCM 复用	 1.0.0 Socket响应结果 内容(且与原协议一致)，由对应节点根据adds / deletes 节点操作情况进行返回
 使用 CODE = -1 ，message为JSON数组信息(即"message":[{code,message}] )其中code = 0 表示成功，>0表示对应错误码( 复用 初始化、分配协议中错误码 )，message表示对应 实例ID字符串
 **/
 51021000：RDS监管相关 失败(json信息有误)(仅Leader节点回复，taskId 值可获取时回复)
-
+51021001：RDS监管相关 失败(实例信息不存在)(仅监管节点回复，taskId 值可获取时回复)
+51021002：RDS监管相关 失败(实例数据源初始化失败)(仅监管节点回复，taskId 值可获取时回复)
+51021003：RDS监管相关 失败(实例VIP绑定失败)(仅监管节点回复，taskId 值可获取时回复)
+51021004：RDS监管相关 失败(实例监听失败)(仅监管节点回复，taskId 值可获取时回复)
+51021005：RDS监管相关 失败(实例VIP解除失败)(仅监管节点回复，taskId 值可获取时回复)
 // ------------------------------- HCS_S_S_HCM 集群最新状态上报 flags: 103-----新增-------------------
 /**请求说明：当HCS_S_S_HCM断开(网络或HCM重启) 重新连上后，Leader将集群最新状态上报
 **/
