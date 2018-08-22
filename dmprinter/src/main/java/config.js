@@ -196,7 +196,6 @@ logger.warn(String.format(
         "heartbeatPeriod": 3000,
         "heartbeatNextWaitTimes": 3000,
         "waitForSlaveInFailover": true,
-        
         "usingAIO": 1,
         "processors": 16,
         "processorExecutor": 4,
@@ -215,7 +214,7 @@ logger.warn(String.format(
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
             "password": "123456",
-			"managerPort": 3323,
+			"managerPort": 3325,
 			"managerUser": "root",
 			"managerPassword": "123456"
         },
@@ -230,7 +229,7 @@ logger.warn(String.format(
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
             "password": "123456",
-			"managerPort": 3323,
+			"managerPort": 3326,
 			"managerUser": "root",
 			"managerPassword": "123456"
         },
@@ -245,7 +244,7 @@ logger.warn(String.format(
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
             "password": "123456",
-			"managerPort": 3323,
+			"managerPort": 3327,
 			"managerUser": "root",
 			"managerPassword": "123456"
         }
@@ -254,7 +253,7 @@ logger.warn(String.format(
         {
             "rdsId": "HotDB_RDS_MM01_1",
             "vip": "127.0.0.1",
-            "port": 3306,
+            "port": 3323,
             "modeltype": 1,
             "maxConnections": 5000,
             "maxUserConnections": 0,
@@ -306,8 +305,7 @@ logger.warn(String.format(
                 ]
             },
             "wallConfig": [
-                "delete_no_where_disallow",
-                "update_no_where_disallow"
+                
             ],
             "sqlAudit": {
                 "rule": [
@@ -336,8 +334,7 @@ logger.warn(String.format(
     ],
     "namesrvAddr": "127.0.0.1:9786",
     "topic": "topicName",
-    "tags": "tagsName",
-    
+    "tags": "tagsName"
 }
 
 /**
@@ -719,6 +716,9 @@ HCS_S_S_HCM 复用	 1.0.0 Socket响应结果 内容，由监管实例节点按�
 CODE >0 表示对应错误码，message为错误信息
 code = 0 表示成功，message内容忽略
 **/
+2441010：RDS实例升级 失败(实例JSON信息不完全)(仅监管节点回复，taskId 值可获取时回复)
+2441011：RDS实例升级 失败(实例不存在)(仅监管节点回复，taskId 值可获取时回复)
+2441012：RDS实例升级 失败(实例数据源添加失败，出现一个异常，实例的所有数据源均不添加)(仅监管节点回复，taskId 值可获取时回复)
 
 
 //----------------------------------3.1.1 M to RS_RDS 应用连接数_管理端SQL-----废弃--------------------------------------
