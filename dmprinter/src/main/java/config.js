@@ -213,10 +213,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
-            "password": "123456",
+            "password": "64DF12CEBA7ECF40B630614DD6A68CD9",
 			"managerPort": 3325,
 			"managerUser": "root",
-			"managerPassword": "123456"
+			"managerPassword": "64DF12CEBA7ECF40B630614DD6A68CD9"
         },
         {
             "hcsId": "2",
@@ -228,10 +228,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
-            "password": "123456",
+            "password": "ADB29AB47052A5D0F4D1548AA8CBDCB9",
 			"managerPort": 3326,
 			"managerUser": "root",
-			"managerPassword": "123456"
+			"managerPassword": "ADB29AB47052A5D0F4D1548AA8CBDCB9"
         },
         {
             "hcsId": "3",
@@ -243,10 +243,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,
             "userName": "root",
             "prvkeyFileContent": "AwABAgM=",
-            "password": "123456",
+            "password": "3BC5CFF0F313E2117A771B16CFFEE69C",
 			"managerPort": 3327,
 			"managerUser": "root",
-			"managerPassword": "123456"
+			"managerPassword": "3BC5CFF0F313E2117A771B16CFFEE69C"
         }
     ],
     "rdsInstances": [
