@@ -318,6 +318,7 @@ logger.warn(String.format(
     "allocationRule": {
         "rule": 0
     },
+	time:1535446191821, // 信息生成时间
     "rdsAllocations": [
         {
             "hcsId": "1",
@@ -776,6 +777,7 @@ code = 0 表示成功，message内容忽略
 			"role":2 // 节点角色：2为Leader(领导者) 1为Candidate(候选者) 其他则为Follower(跟随者)
         }
     ],
+	time:1535446191821, // 信息生成时间
 	"rdsAllocations": [// 实例分配（如数组为null或lengt为0 则表示 集群下无实例信息）
         {
             "hcsId": "1",// hcs节点id

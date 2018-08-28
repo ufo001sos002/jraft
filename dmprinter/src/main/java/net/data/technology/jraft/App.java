@@ -119,54 +119,59 @@ public class App
     }
 
     private static void executeAsClient() throws Exception {
-	BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-	System.out.println("Please write cluster json:");
-	String configJSONStr = reader.readLine().trim();
-	HCSClusterAllConfig hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(configJSONStr);
-	ClusterConfiguration configuration = Middleware
-		.getClusterConfigurationFromHCSClusterAllConfig(hcsClusterAllConfig);
-	RaftClient client = new RaftClient(
-		new RpcTcpClientFactory(new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors())),
-		configuration);
-	while (true) {
-	    System.out.print("Message:");
-	    String message = reader.readLine();
-	    if (message.startsWith("addsrv")) {
-		StringTokenizer tokenizer = new StringTokenizer(message, ";");
-		ArrayList<String> values = new ArrayList<String>();
-		while (tokenizer.hasMoreTokens()) {
-		    values.add(tokenizer.nextToken());
-		}
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        System.out.println("Please write cluster json:");
+        String configJSONStr = reader.readLine().trim();
+        HCSClusterAllConfig hcsClusterAllConfig = HCSClusterAllConfig.loadObjectFromJSONString(configJSONStr);
+        ClusterConfiguration configuration =
+                Middleware.getClusterConfigurationFromHCSClusterAllConfig(hcsClusterAllConfig);
+        RaftClient client = new RaftClient(
+                new RpcTcpClientFactory(
+                        new ScheduledThreadPoolExecutor(Runtime.getRuntime().availableProcessors())),
+                configuration);
+        while (true) {
+            System.out.print("Message:");
+            String message = reader.readLine();
+            if (message.startsWith("addsrv")) {
+                StringTokenizer tokenizer = new StringTokenizer(message, ";");
+                ArrayList<String> values = new ArrayList<String>();
+                while (tokenizer.hasMoreTokens()) {
+                    values.add(tokenizer.nextToken());
+                }
 
-		if (values.size() == 3) { // TODO JSON 字符串 增加服务器
-		    ClusterServer server = new ClusterServer();
-		    server.setId(values.get(1));
-		    server.setEndpoint(values.get(2));
-		    if (values.size() > 4) {
-			server.setUserName(values.get(3));
-			server.setPassword(values.get(4));
-		    }
-		    boolean accepted = client.addServer(server).get();
-		    System.out.println("Accepted: " + String.valueOf(accepted));
-		    continue;
-		}
-	    } else if (message.startsWith("fmt:")) {// 增加日志
-		System.out.println("plase print int flag:");
-		int flag = Integer.parseInt(reader.readLine().trim());
-		System.out.println("plase print send json string:");
-		String sendJsonStr = reader.readLine().trim();
-		boolean accepted = client.appendEntries(new byte[][] {
-			new SocketPacket(MsgSign.TYPE_RDS_SERVER, flag, sendJsonStr.getBytes(StandardCharsets.UTF_8))
-				.writeBytes() }).get();
-		System.out.println("Accepted: " + String.valueOf(accepted));
-		continue;
-	    } else if (message.startsWith("rmsrv:")) { // TODO JSON 字符串 移除服务器
-		String text = message.substring(6);
-		String serverId = text.trim();
-		boolean accepted = client.removeServer(serverId).get();
-		System.out.println("Accepted: " + String.valueOf(accepted));
-		continue;
-	    }
+                if (values.size() == 3) { // TODO JSON 字符串 增加服务器
+                    ClusterServer server = new ClusterServer();
+                    server.setId(values.get(1));
+                    server.setEndpoint(values.get(2));
+                    if (values.size() > 4) {
+                        server.setUserName(values.get(3));
+                        server.setPassword(values.get(4));
+                    }
+                    boolean accepted = client.addServer(server).get();
+                    System.out.println("Accepted: " + String.valueOf(accepted));
+                    continue;
+                }
+            } else if (message.startsWith("fmt")) {// 增加日志
+                System.out.println("plase print int flag:");
+                int flag = Integer.parseInt(reader.readLine().trim());
+                System.out.println("plase print send json string:");
+                String sendJsonStr = reader.readLine().trim();
+                System.out.println(
+                        "flag is:" + flag + " json is:" + sendJsonStr + " are you send? if send please y :");
+                if ("Y".equalsIgnoreCase(reader.readLine().trim())) {
+                    boolean accepted =
+                            client.appendEntries(new byte[][] {new SocketPacket(MsgSign.TYPE_RDS_SERVER, flag,
+                                    sendJsonStr.getBytes(StandardCharsets.UTF_8)).writeBytes()}).get();
+                    System.out.println("Accepted: " + String.valueOf(accepted));
+                }
+                continue;
+            } else if (message.startsWith("rmsrv:")) { // TODO JSON 字符串 移除服务器
+                String text = message.substring(6);
+                String serverId = text.trim();
+                boolean accepted = client.removeServer(serverId).get();
+                System.out.println("Accepted: " + String.valueOf(accepted));
+                continue;
+            }
 
 //	    boolean accepted = client.appendEntries(new byte[][] { message.getBytes() }).get();
 //	    System.out.println("Accepted: " + String.valueOf(accepted));
