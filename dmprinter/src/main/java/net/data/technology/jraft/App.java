@@ -139,7 +139,7 @@ public class App
                     values.add(tokenizer.nextToken());
                 }
 
-                if (values.size() == 3) { // TODO JSON 字符串 增加服务器
+                if (values.size() >= 3) { // TODO JSON 字符串 增加服务器
                     ClusterServer server = new ClusterServer();
                     server.setId(values.get(1));
                     server.setEndpoint(values.get(2));
@@ -147,8 +147,12 @@ public class App
                         server.setUserName(values.get(3));
                         server.setPassword(values.get(4));
                     }
-                    boolean accepted = client.addServer(server).get();
-                    System.out.println("Accepted: " + String.valueOf(accepted));
+                    try {
+                        boolean accepted = client.addServer(server).get();
+                        System.out.println("Accepted: " + String.valueOf(accepted));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     continue;
                 }
             } else if (message.startsWith("fmt")) {// 增加日志
@@ -159,17 +163,26 @@ public class App
                 System.out.println(
                         "flag is:" + flag + " json is:" + sendJsonStr + " are you send? if send please y :");
                 if ("Y".equalsIgnoreCase(reader.readLine().trim())) {
-                    boolean accepted =
-                            client.appendEntries(new byte[][] {new SocketPacket(MsgSign.TYPE_RDS_SERVER, flag,
-                                    sendJsonStr.getBytes(StandardCharsets.UTF_8)).writeBytes()}).get();
-                    System.out.println("Accepted: " + String.valueOf(accepted));
+                    try {
+                        boolean accepted = client
+                                .appendEntries(new byte[][] {new SocketPacket(MsgSign.TYPE_RDS_SERVER, flag,
+                                        sendJsonStr.getBytes(StandardCharsets.UTF_8)).writeBytes()})
+                                .get();
+                        System.out.println("Accepted: " + String.valueOf(accepted));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 continue;
             } else if (message.startsWith("rmsrv:")) { // TODO JSON 字符串 移除服务器
                 String text = message.substring(6);
                 String serverId = text.trim();
-                boolean accepted = client.removeServer(serverId).get();
-                System.out.println("Accepted: " + String.valueOf(accepted));
+                try {
+                    boolean accepted = client.removeServer(serverId).get();
+                    System.out.println("Accepted: " + String.valueOf(accepted));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 continue;
             }
 
