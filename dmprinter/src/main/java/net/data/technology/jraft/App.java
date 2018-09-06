@@ -156,8 +156,8 @@ public class App
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                    continue;
                 }
+                continue;
             } else if (message.startsWith("fmt")) {// 增加日志
                 try {
                     System.out.println("plase print int flag:");

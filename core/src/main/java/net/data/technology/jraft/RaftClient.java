@@ -176,6 +176,9 @@ public class RaftClient {
                     }else{
                         this.randomLeader = false;// 置为非随机 因为 集群已返回当前 leader id
                         this.leaderId = response.getDestination(); // 设置当前leaderId
+			if (logger.isInfoEnabled())
+			    logger.info(String.format("rpc error, send request to remote server was no leader(%s)",
+				    this.leaderId));
                         tryCurrentLeader(request, future, rpcBackoff, retry); // 并重新向leader发送日志消息
                     }
                 }
