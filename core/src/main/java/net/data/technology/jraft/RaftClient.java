@@ -171,13 +171,14 @@ public class RaftClient {
                     future.complete(true); //接受
                 }else{ // 未接受
                     // set the leader return from the server
-                    if(this.leaderId == response.getDestination() && !this.randomLeader){ // 则判断当前是否为随机leader(即非leader)
+		    if (this.leaderId.equals(response.getDestination()) && !this.randomLeader) { // 则判断当前是否为随机leader(即非leader)
                         future.complete(false); // 表明发往的为Leader,置发送日志任务结束  且发送的日志 不被接受
                     }else{
                         this.randomLeader = false;// 置为非随机 因为 集群已返回当前 leader id
                         this.leaderId = response.getDestination(); // 设置当前leaderId
 			if (logger.isInfoEnabled())
-			    logger.info(String.format("rpc error, send request to remote server was no leader(%s)",
+			    logger.info(String.format(
+				    "rpc error, send request to remote server was no leader(%s) retry Sending",
 				    this.leaderId));
                         tryCurrentLeader(request, future, rpcBackoff, retry); // 并重新向leader发送日志消息
                     }
