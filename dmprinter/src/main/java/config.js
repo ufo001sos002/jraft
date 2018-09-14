@@ -185,7 +185,7 @@ logger.warn(String.format(
 
 
 
-// ----------------------------------------------------HotDB Cloud Server Cluster 通讯协议增加或修改的------------------------------------------------------
+// ----------------------------------------------------HotDB Cloud Server Cluster 通讯协议增加或修改的  （后续协议项中的不一定同步，以下方未注释为准(实时更新)）------------------------------------------------------
 先看老的 废弃 或 需要修改的  然后 再考虑需要 新增的 新的flags以及错误code
 // -----------------完整 未带注释版(用于修改 生成 简短JSON)---------------------
 {
@@ -200,7 +200,8 @@ logger.warn(String.format(
         "processors": 16,
         "processorExecutor": 4,
         "timerExecutor": 6,
-        "parkPeriod": 100000
+        "parkPeriod": 100000,
+		"switchingDelayTime" : 10  //手动切换允许的复制延迟时间ms
     },
     "hcsGroup": [
         {
@@ -333,9 +334,11 @@ logger.warn(String.format(
             ]
         }
     ],
-    "namesrvAddr": "127.0.0.1:9786",
-    "topic": "topicName",
-    "tags": "tagsName"
+    "tags":{ // 公有配置
+		"sqlAudittags": "tagsName", 
+		"sqlIntercepttags": "tagsName", 
+		"userLogintags": "tagsName" 
+	},
 }
 
 /**
@@ -346,30 +349,40 @@ logger.warn(String.format(
  HCS_R_S_HCS 表示 HCS 利用 Raft协议 的Socket连接发送消息至    HCS
 */
 
-
+{
+    "id：taskId (除心跳业务外，其他回复必须)" : "值：字符串String",
+    "id": "1",
+    "token：HCS ID" :  "值：字符串String",
+    "token": "2",
+	"：" :  "值：",
+	"：" :  "值：整数int",
+	"：" :  "值：字符串String",
+	"：" :  "值：布尔型boolean",
+	"：" :  "值：长整型long",
+	"：" :  "值：JSON对象",
+	"：" :  "值：JSON对象数组",
+}
+----------------------------------------------------
 //-------------------------------------1.2.1 HCM_S_S_HCS 配置信息(初次启动时集群配置) flags：2---修改----------------------------------
 /** data：**/
+
 {
     "taskId": "uuid", // 任务唯一Id, 由HCM下发时,HCS响应必须带该字段值(HCS集群主动发起时则不需要)
-    "systemConfig": { // HCS集群各节点私有配置(可根据不同服务进行配置下发，各节点独自应用) 目前项不为最终项
-        "managerPort": 3323, // 管理端port
-        "managerUser": "root",// 管理端登录用户
-        "managerPassword": "123456", // 管理端登录密码
-        "heartbeatToM": 3000, // 发送心跳至HCM(ms)
-        "enableHeartbeat": true, //是否启用心跳，是：true，否：false
-        "heartbeatPeriod": 3000, // 心跳检测周期(ms)
-        "heartbeatNextWaitTimes": 3000, // 下次心跳检测等待时间(ms)
-        "waitForSlaveInFailover": true, // 故障切换中是否等待从机追上复// 制，是：true，否：false
-        
-        "usingAIO": 1, //是否使用AIO，是：1，否：0
-        "processors": 16, //处理器数  所有前后连接对象绑定其中一个 （后续可能得考虑一个RDS实例 使用一套processors，互不影响）
-        "processorExecutor": 4, //各处理器线程数  定时心跳等操作kill query、前端连接数据接收至下发MySQL之前处理、hold住等需要
-        "timerExecutor": 6, //定时器线程数
-        "parkPeriod": 100000 // 消息系统空闲时线程休眠周期(ns)
+	"systemConfig": {
+        "heartbeatToM": 3000,// 发送心跳至HCM(ms)
+        "enableHeartbeat": true,//是否启用心跳，是：true，否：false
+        "heartbeatPeriod": 3000,// 心跳检测周期(ms)
+        "waitForSlaveInFailover": true,// 故障切换中是否等待从机追上复// 制，是：true，否：false
+        "usingAIO": 1,//是否使用AIO，是：1，否：0
+        "processors": 16,//处理器数  所有前后连接对象绑定其中一个 （后续可能得考虑一个RDS实例 使用一套processors，互不影响）
+        "processorExecutor": 4,/各处理器线程数  定时心跳等操作kill query、前端连接数据接收至下发MySQL之前处理、hold住等需要
+        "timerExecutor": 6,//定时器线程数
+        "parkPeriod": 100000, // 消息系统空闲时线程休眠周期(ns)
+		"switchingDelayTime" : 10  //手动切换允许的复制延迟时间ms
     },
-    "hcsGroup": [ // HCS 集群节点信息
+    "hcsGroup": [
         {
-            "hcsId": "1", // HCS id(唯一) 
+            "hcsId": "1",// HCS id(唯一) 
             "ip": "192.168.200.215", // HCS 集群通信 IP
             "port": 9001, // HCS 集群通信 端口
             "status": 0, // 服务器状态: 0为在线可用(默认), 1为离线
@@ -377,7 +390,10 @@ logger.warn(String.format(
             "isUsedPrvkey": false,// SSH访问 是否使用私钥:true为使用，false为不使用
             "userName": "root",//SSH访问用户名
             "prvkeyFileContent": "AwABAgM=",// 对应byte[] 数组对象 ，认证的私钥文件内容(如果为null 则默认使用本地id_rsa私钥文件内容)
-            "password": "123456" // 登录用户密码或私钥密码(密文密码需使用hcsId转换)
+            "password": "64DF12CEBA7ECF40B630614DD6A68CD9",// 登录用户密码或私钥密码(密文密码需使用hcsId转换)
+			"managerPort": 3325,// 管理端口
+			"managerUser": "root",//管理端用户名
+			"managerPassword": "64DF12CEBA7ECF40B630614DD6A68CD9" //管理端密码
         }
     ]
 }
@@ -566,7 +582,9 @@ HCS_S_S_HCM 复用	 1.0.0 Socket响应结果 内容，由监管实例节点按�
 CODE >0 表示对应错误码，message为错误信息
 code = 0 表示成功，message内容忽略
 **/
- 
+2311000：RDS SQL拦截 失败(捕获异常)
+2311011：RDS SQL拦截 失败(json信息有误)(仅Leader节点回复，taskId 值可获取时回复)
+2311012：RDS SQL拦截 失败(实例信息 不存在)(仅Leader节点回复，taskId 值可获取时回复)
 
 //-----------------------------------2.32.1 HCM_R_S_HCS RDS 数据库删除 flags：32---修改------------------------------------
 /** data：JSON内容保持不变**/
