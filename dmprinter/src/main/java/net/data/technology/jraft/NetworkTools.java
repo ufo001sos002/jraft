@@ -5,12 +5,17 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import net.data.technology.jraft.tools.Tools;
+
 
 // import org.slf4j.Logger;
 // import org.slf4j.LoggerFactory;
@@ -610,6 +615,52 @@ public class NetworkTools {
             }
         }
         return -1;
+    }
+    
+    /**
+     * 测试IP 端口在指定时间内是否能连接 <br>
+     * <b>注：本方法中 ip不可达也属于不能连接</b>
+     * 
+     * @param ip
+     * @param port
+     * @param timeout 测试时间
+     * @return false连接失败 true当前此刻连接成功
+     */
+    public static boolean testConnectIPPort(String ip, int port, int timeout) {
+        InetAddress address = null;
+        boolean isReachable = false;
+        try {
+            address = InetAddress.getByName(ip);
+            isReachable = address.isReachable(timeout);
+        } catch (Exception e) {
+            // if (logger.isInfoEnabled()) {
+            // logger.info("ping " + ip + "is error:" + e.getMessage(), e);
+            // }
+        }
+        if (!isReachable) {
+            return false;
+        }
+        Socket testConnectIpPort = new Socket();
+        try {
+            testConnectIpPort.connect(new InetSocketAddress(address, port), timeout);
+        } catch (Exception e) {
+            return false;
+        } finally { // 连接关闭
+            try {
+                testConnectIpPort.close();
+            } catch (Exception e) {}
+        }
+        return true;
+    }
+
+    /**
+     * 线程堵塞等待 指定ip port处于空闲状态(未监听)<br>
+     * <b>注：本方法中 ip不可达也属于 未监听状态</b>
+     */
+    public static void waitForIpPortIdle(String ip, int port) {
+        while (testConnectIPPort(ip, port, DEFAULT_TIMEOUT)) { // 能连接上IP端口，表示还处于监听状态
+            Tools.sleep(100);
+        }
     }
 
     /**
